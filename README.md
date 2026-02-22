@@ -10,7 +10,14 @@ Rust core with a CLI, HTTP API, MCP server, and Python bindings.
 
 ## Installation
 
-### CLI
+### Homebrew (macOS)
+
+```bash
+brew tap bradleydwyer/caucus
+brew install caucus
+```
+
+### From source
 
 ```bash
 git clone https://github.com/bradleydwyer/caucus
