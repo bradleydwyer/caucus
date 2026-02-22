@@ -2,7 +2,7 @@ use clap::Args;
 use colored::Colorize;
 use conroute_core::{consensus, Candidate, ConsensusResult, OutputFormat};
 
-use super::{build_provider, build_single_provider, default_models};
+use super::{build_single_provider, default_models};
 
 #[derive(Args)]
 pub struct AskArgs {
@@ -61,24 +61,36 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
         );
     }
 
-    // Generate candidates from all models
-    let provider = build_provider(&models)?;
-    let mut candidates = Vec::new();
+    // Generate candidates from all models in parallel
+    let prompt = args.prompt.clone();
+    let system = args.system.clone();
+    let mut handles = Vec::new();
 
     for model in &models {
-        let llm = provider
-            .get(model)
-            .ok_or_else(|| anyhow::anyhow!("No provider for model: {model}"))?;
+        let llm = build_single_provider(model)?;
+        let model = model.clone();
+        let prompt = prompt.clone();
+        let system = system.clone();
 
         if verbose {
             eprintln!("  {} Querying {}...", "·".dimmed(), model.yellow());
         }
-        match llm.complete(&args.prompt, args.system.as_deref()).await {
+
+        handles.push(tokio::spawn(async move {
+            let result = llm.complete(&prompt, system.as_deref()).await;
+            (model, result)
+        }));
+    }
+
+    let mut candidates = Vec::new();
+    for handle in handles {
+        let (model, result) = handle.await?;
+        match result {
             Ok(response) => {
                 candidates.push(
                     Candidate::new(response)
-                        .with_model(model.clone())
-                        .with_metadata("question", serde_json::json!(&args.prompt)),
+                        .with_model(model)
+                        .with_metadata("question", serde_json::json!(&prompt)),
                 );
             }
             Err(e) => {
