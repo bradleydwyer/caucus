@@ -10,7 +10,7 @@ Rust core with a CLI, HTTP API, MCP server, and Python bindings.
 
 ## Installation
 
-### From source
+### CLI
 
 ```bash
 git clone https://github.com/bradleydwyer/caucus
@@ -18,12 +18,16 @@ cd caucus
 cargo install --path crates/caucus-cli
 ```
 
-### Python (via maturin)
+### Python library (optional)
+
+Only needed if you want to use caucus from Python. Requires [maturin](https://github.com/PyO3/maturin) to compile the Rust code into a native Python module.
 
 ```bash
 pip install maturin
-maturin develop --release
+maturin develop --release  # builds and installs into your current Python env
 ```
+
+Then: `from caucus import consensus, Candidate`
 
 ## Quick start
 
