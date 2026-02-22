@@ -1,0 +1,18 @@
+[package]
+name = "conroute-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Multi-LLM consensus engine — composable strategies for aggregating LLM outputs"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+reqwest = { version = "0.12", features = ["json"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

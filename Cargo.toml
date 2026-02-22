@@ -1,0 +1,19 @@
+[workspace]
+members = ["crates/conroute-core", "crates/conroute-cli", "crates/conroute-python"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/conroute/conroute"
+
+[workspace.dependencies]
+conroute-core = { path = "crates/conroute-core" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

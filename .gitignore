@@ -1,0 +1,32 @@
+# Build
+/target
+**/*.rs.bk
+
+# Python
+*.pyo
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+.venv/
+venv/
+
+# Shared libraries
+*.so
+*.dylib
+*.dll
+
+# Environment / secrets
+.env
+.env.*
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Claude Code
+.claude/

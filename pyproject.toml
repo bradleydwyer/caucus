@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "conroute"
+version = "0.1.0"
+description = "Multi-LLM consensus engine — composable strategies for aggregating LLM outputs"
+requires-python = ">=3.9"
+license = "MIT OR Apache-2.0"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+manifest-path = "crates/conroute-python/Cargo.toml"
+python-source = "crates/conroute-python/python"

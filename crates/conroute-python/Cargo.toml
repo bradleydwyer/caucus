@@ -1,0 +1,17 @@
+[package]
+name = "conroute-python"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Python bindings for conroute multi-LLM consensus engine"
+
+[lib]
+name = "conroute"
+crate-type = ["cdylib"]
+
+[dependencies]
+conroute-core.workspace = true
+pyo3 = { version = "0.22", features = ["extension-module"] }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
