@@ -13,12 +13,10 @@ Rust core with a CLI, HTTP API, MCP server, and Python bindings.
 ### From source
 
 ```bash
-git clone https://github.com/conroute/conroute
+git clone https://github.com/bradleydwyer/conroute
 cd conroute
-cargo build --release
+cargo install --path crates/conroute-cli
 ```
-
-The binary is at `./target/release/conroute`.
 
 ### Python (via maturin)
 
@@ -35,12 +33,20 @@ export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
 export GOOGLE_API_KEY=AI...
 
-# One-shot consensus across three models
-conroute ask "What causes inflation?" \
-  --models gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview \
-  --strategy majority-vote \
-  --format supreme-court
+# Just ask — queries all configured models, synthesizes the best answer
+conroute "What causes inflation?"
+
+# Pick your models
+conroute "What causes inflation?" -m gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview
+
+# See what's happening under the hood
+conroute "What causes inflation?" -v
+
+# Override strategy and format
+conroute "What causes inflation?" -s debate -f supreme-court
 ```
+
+No subcommand required. conroute auto-detects configured models, uses `judge` strategy by default, and prints just the answer.
 
 ## Strategies
 
@@ -48,15 +54,17 @@ conroute ask "What causes inflation?" \
 |----------|-------------|-------------|
 | `majority-vote` | No | Groups responses by similarity, picks the largest group |
 | `weighted-vote` | No | Same as majority but weighted by confidence or model reputation |
-| `judge` | Yes | A separate LLM evaluates all responses and synthesizes the best one |
+| `judge` | Yes | A separate LLM evaluates all responses and synthesizes the best one (default) |
 | `debate` | Yes | Multi-round debate where positions are refined until convergence |
 | `debate-then-vote` | Yes | Debate rounds followed by majority vote |
+
+With a single model, conroute skips consensus and returns the response directly.
 
 ## Output formats
 
 | Format | Use case |
 |--------|----------|
-| `plain` | Just the consensus text |
+| `plain` | Just the consensus text (default) |
 | `json` | Full result with metadata, for programmatic use |
 | `supreme-court` | Majority opinion + concurrences + dissents + vote summary |
 | `detailed` | Full transcript with all candidates and process info |
@@ -64,30 +72,23 @@ conroute ask "What causes inflation?" \
 ## CLI commands
 
 ```bash
-# One-shot consensus
-conroute ask "prompt" --models gpt-5.2,claude-opus-4-6 --strategy judge
+# Default — just works
+conroute "prompt"
 
-# Compare strategies side-by-side
-conroute compare "prompt" --models gpt-5.2,claude-opus-4-6 --strategies majority-vote,judge
-
-# Multi-round debate
-conroute debate "prompt" --models gpt-5.2,claude-opus-4-6 --rounds 3
-
-# Batch evaluation
-conroute bench tests.jsonl --models gpt-5.2 --strategies majority-vote,judge -o results.json
-
-# HTTP API server
+# Explicit subcommands for power users
+conroute ask "prompt" --strategy debate --format supreme-court
+conroute compare "prompt" --strategies majority-vote,judge
+conroute debate "prompt" --rounds 3
+conroute bench tests.jsonl -o results.json
 conroute serve --port 8080
-
-# MCP server (stdio)
 conroute serve --mcp
 ```
-
-Use `conroute <command> --help` to see all options.
 
 ## HTTP API
 
 ```bash
+conroute serve --port 8080
+
 curl -X POST http://localhost:8080/v1/consensus \
   -H "Content-Type: application/json" \
   -d '{
@@ -151,4 +152,4 @@ cargo run -p conroute-core --example basic_consensus
 
 ## License
 
-MIT OR Apache-2.0
+MIT
