@@ -1,7 +1,7 @@
 use clap::Args;
 use colored::Colorize;
-use conroute_core::{Candidate, MultiRoundDebate, ConsensusStrategy, OutputFormat};
-use conroute_core::strategy::debate::DebateConfig;
+use caucus_core::{Candidate, MultiRoundDebate, ConsensusStrategy, OutputFormat};
+use caucus_core::strategy::debate::DebateConfig;
 
 use super::{build_provider, build_single_provider, default_models};
 

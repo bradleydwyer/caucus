@@ -1,5 +1,5 @@
 [package]
-name = "conroute-core"
+name = "caucus-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

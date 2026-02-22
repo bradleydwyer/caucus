@@ -1,4 +1,4 @@
-use conroute_core::{consensus, Candidate, OutputFormat};
+use caucus_core::{consensus, Candidate, OutputFormat};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

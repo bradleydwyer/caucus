@@ -1,4 +1,4 @@
-//! conroute-core: Multi-LLM consensus engine.
+//! caucus-core: Multi-LLM consensus engine.
 //!
 //! Provides composable strategies for aggregating and synthesizing outputs
 //! from multiple LLMs into consensus results.
@@ -6,7 +6,7 @@
 //! # Quick Start
 //!
 //! ```rust
-//! use conroute_core::{Candidate, consensus};
+//! use caucus_core::{Candidate, consensus};
 //!
 //! # async fn example() -> anyhow::Result<()> {
 //! let candidates = vec![

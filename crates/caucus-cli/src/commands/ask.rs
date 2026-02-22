@@ -1,6 +1,6 @@
 use clap::Args;
 use colored::Colorize;
-use conroute_core::{consensus, Candidate, ConsensusResult, OutputFormat};
+use caucus_core::{consensus, Candidate, ConsensusResult, OutputFormat};
 
 use super::{build_single_provider, default_models};
 
@@ -134,7 +134,7 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
     }
 
     // Run consensus
-    let judge_llm: Option<Box<dyn conroute_core::LlmProvider>> =
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> =
         if strategy_needs_llm(&args.strategy) {
             // Use the first model as the judge
             let judge_model = models.first().unwrap();

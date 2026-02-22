@@ -1,6 +1,6 @@
 use clap::Args;
 use colored::Colorize;
-use conroute_core::{consensus, Candidate, OutputFormat};
+use caucus_core::{consensus, Candidate, OutputFormat};
 
 use super::{build_provider, build_single_provider, default_models};
 
@@ -64,7 +64,7 @@ pub async fn run(args: CompareArgs) -> anyhow::Result<()> {
     }
 
     // Build a judge LLM for strategies that need it
-    let judge_llm: Option<Box<dyn conroute_core::LlmProvider>> = {
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = {
         let judge_model = models.first().unwrap();
         build_single_provider(judge_model).ok()
     };

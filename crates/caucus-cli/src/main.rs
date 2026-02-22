@@ -25,7 +25,7 @@ fn needs_subcommand_injection(args: &[String]) -> bool {
 }
 
 #[derive(Parser)]
-#[command(name = "conroute")]
+#[command(name = "caucus")]
 #[command(about = "Multi-LLM consensus engine — aggregate and synthesize LLM outputs")]
 #[command(version)]
 struct Cli {
@@ -56,11 +56,11 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("conroute=info".parse()?),
+                .add_directive("caucus=info".parse()?),
         )
         .init();
 
-    // If no subcommand is given, treat it as `ask` (e.g. `conroute "question"`)
+    // If no subcommand is given, treat it as `ask` (e.g. `caucus "question"`)
     let mut args: Vec<String> = std::env::args().collect();
     if needs_subcommand_injection(&args) {
         args.insert(1, "ask".into());

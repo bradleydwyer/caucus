@@ -1,10 +1,10 @@
-# conroute
+# caucus
 
 Multi-LLM consensus engine — composable strategies for aggregating and synthesizing outputs from multiple LLMs.
 
 ## About
 
-conroute takes responses from multiple LLMs and produces a single consensus result. It provides several strategies (voting, judge synthesis, multi-round debate) as composable primitives — not tied to any agent framework.
+caucus takes responses from multiple LLMs and produces a single consensus result. It provides several strategies (voting, judge synthesis, multi-round debate) as composable primitives — not tied to any agent framework.
 
 Rust core with a CLI, HTTP API, MCP server, and Python bindings.
 
@@ -13,9 +13,9 @@ Rust core with a CLI, HTTP API, MCP server, and Python bindings.
 ### From source
 
 ```bash
-git clone https://github.com/bradleydwyer/conroute
-cd conroute
-cargo install --path crates/conroute-cli
+git clone https://github.com/bradleydwyer/caucus
+cd caucus
+cargo install --path crates/caucus-cli
 ```
 
 ### Python (via maturin)
@@ -34,19 +34,19 @@ export ANTHROPIC_API_KEY=sk-ant-...
 export GOOGLE_API_KEY=AI...
 
 # Just ask — queries all configured models, synthesizes the best answer
-conroute "What causes inflation?"
+caucus "What causes inflation?"
 
 # Pick your models
-conroute "What causes inflation?" -m gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview
+caucus "What causes inflation?" -m gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview
 
 # See what's happening under the hood
-conroute "What causes inflation?" -v
+caucus "What causes inflation?" -v
 
 # Override strategy and format
-conroute "What causes inflation?" -s debate -f supreme-court
+caucus "What causes inflation?" -s debate -f supreme-court
 ```
 
-No subcommand required. conroute auto-detects configured models, uses `judge` strategy by default, and prints just the answer.
+No subcommand required. caucus auto-detects configured models, uses `judge` strategy by default, and prints just the answer.
 
 ## Strategies
 
@@ -58,7 +58,7 @@ No subcommand required. conroute auto-detects configured models, uses `judge` st
 | `debate` | Yes | Multi-round debate where positions are refined until convergence |
 | `debate-then-vote` | Yes | Debate rounds followed by majority vote |
 
-With a single model, conroute skips consensus and returns the response directly.
+With a single model, caucus skips consensus and returns the response directly.
 
 ## Output formats
 
@@ -73,21 +73,21 @@ With a single model, conroute skips consensus and returns the response directly.
 
 ```bash
 # Default — just works
-conroute "prompt"
+caucus "prompt"
 
 # Explicit subcommands for power users
-conroute ask "prompt" --strategy debate --format supreme-court
-conroute compare "prompt" --strategies majority-vote,judge
-conroute debate "prompt" --rounds 3
-conroute bench tests.jsonl -o results.json
-conroute serve --port 8080
-conroute serve --mcp
+caucus ask "prompt" --strategy debate --format supreme-court
+caucus compare "prompt" --strategies majority-vote,judge
+caucus debate "prompt" --rounds 3
+caucus bench tests.jsonl -o results.json
+caucus serve --port 8080
+caucus serve --mcp
 ```
 
 ## HTTP API
 
 ```bash
-conroute serve --port 8080
+caucus serve --port 8080
 
 curl -X POST http://localhost:8080/v1/consensus \
   -H "Content-Type: application/json" \
@@ -101,7 +101,7 @@ curl -X POST http://localhost:8080/v1/consensus \
 ## Rust library
 
 ```rust
-use conroute_core::{consensus, Candidate};
+use caucus_core::{consensus, Candidate};
 
 let candidates = vec![
     Candidate::new("The answer is 42").with_model("gpt-5.2"),
@@ -117,7 +117,7 @@ println!("{:.0}%", result.agreement_score * 100.0); // "67%"
 ## Python
 
 ```python
-from conroute import consensus, Candidate
+from caucus import consensus, Candidate
 
 candidates = [
     Candidate(content="The answer is 42", model="gpt-5.2"),
@@ -147,7 +147,7 @@ The CLI auto-loads `.env` from the current directory, or you can specify a path 
 ```bash
 cargo test          # Run all tests
 cargo clippy        # Lint
-cargo run -p conroute-core --example basic_consensus
+cargo run -p caucus-core --example basic_consensus
 ```
 
 ## License

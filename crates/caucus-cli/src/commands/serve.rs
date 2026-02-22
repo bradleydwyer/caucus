@@ -10,7 +10,7 @@ use clap::Args;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
-use conroute_core::{consensus, Candidate, ConsensusResult, OutputFormat};
+use caucus_core::{consensus, Candidate, ConsensusResult, OutputFormat};
 
 use super::build_single_provider;
 
@@ -48,7 +48,7 @@ pub async fn run(args: ServeArgs) -> anyhow::Result<()> {
 
     let addr = format!("{}:{}", args.host, args.port);
     eprintln!(
-        "{} conroute API server listening on {}",
+        "{} caucus API server listening on {}",
         "▶".green(),
         addr.cyan(),
     );
@@ -150,7 +150,7 @@ async fn consensus_endpoint(
     })?;
 
     // Build judge LLM if needed
-    let judge_llm: Option<Box<dyn conroute_core::LlmProvider>> = if strategy_needs_llm(&req.strategy) {
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = if strategy_needs_llm(&req.strategy) {
         // Try to use the first candidate's model, or fall back to env-configured default
         let model_name = candidates
             .first()
@@ -194,7 +194,7 @@ async fn pipeline_endpoint(
     State(_state): State<Arc<AppState>>,
     Json(req): Json<PipelineRequest>,
 ) -> Result<Json<ConsensusResponse>, (StatusCode, String)> {
-    use conroute_core::{Pipeline, VoteMethod};
+    use caucus_core::{Pipeline, VoteMethod};
 
     let format = OutputFormat::from_str(&req.format).map_err(|e| {
         (StatusCode::BAD_REQUEST, format!("Invalid format: {e}"))
@@ -228,7 +228,7 @@ async fn pipeline_endpoint(
     })?;
 
     // Use first model as judge
-    let judge_llm: Option<Box<dyn conroute_core::LlmProvider>> = req
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = req
         .models
         .first()
         .and_then(|m| build_single_provider(m).ok());
@@ -257,7 +257,7 @@ async fn run_mcp() -> anyhow::Result<()> {
     // Reads JSON-RPC requests from stdin, writes responses to stdout
     use tokio::io::{AsyncBufReadExt, BufReader};
 
-    eprintln!("{} conroute MCP server started (stdio)", "▶".green());
+    eprintln!("{} caucus MCP server started (stdio)", "▶".green());
 
     let stdin = tokio::io::stdin();
     let reader = BufReader::new(stdin);
@@ -272,7 +272,7 @@ async fn run_mcp() -> anyhow::Result<()> {
                 "tools": {}
             },
             "serverInfo": {
-                "name": "conroute",
+                "name": "caucus",
                 "version": env!("CARGO_PKG_VERSION")
             }
         }

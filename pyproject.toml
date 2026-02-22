@@ -3,11 +3,11 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "conroute"
+name = "caucus"
 version = "0.1.0"
 description = "Multi-LLM consensus engine — composable strategies for aggregating LLM outputs"
 requires-python = ">=3.9"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -16,5 +16,5 @@ classifiers = [
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
-manifest-path = "crates/conroute-python/Cargo.toml"
-python-source = "crates/conroute-python/python"
+manifest-path = "crates/caucus-python/Cargo.toml"
+python-source = "crates/caucus-python/python"

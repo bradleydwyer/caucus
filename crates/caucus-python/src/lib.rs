@@ -34,9 +34,9 @@ impl Candidate {
     }
 }
 
-impl From<&Candidate> for conroute_core::Candidate {
+impl From<&Candidate> for caucus_core::Candidate {
     fn from(py_candidate: &Candidate) -> Self {
-        let mut c = conroute_core::Candidate::new(&py_candidate.content);
+        let mut c = caucus_core::Candidate::new(&py_candidate.content);
         if let Some(model) = &py_candidate.model {
             c = c.with_model(model.clone());
         }
@@ -88,8 +88,8 @@ impl ConsensusResult {
     }
 }
 
-impl From<conroute_core::ConsensusResult> for ConsensusResult {
-    fn from(r: conroute_core::ConsensusResult) -> Self {
+impl From<caucus_core::ConsensusResult> for ConsensusResult {
+    fn from(r: caucus_core::ConsensusResult) -> Self {
         Self {
             content: r.content,
             strategy: r.strategy,
@@ -111,7 +111,7 @@ impl From<conroute_core::ConsensusResult> for ConsensusResult {
 #[pyfunction]
 #[pyo3(signature = (candidates, strategy="majority_vote"))]
 fn consensus(candidates: Vec<Candidate>, strategy: &str) -> PyResult<ConsensusResult> {
-    let core_candidates: Vec<conroute_core::Candidate> =
+    let core_candidates: Vec<caucus_core::Candidate> =
         candidates.iter().map(|c| c.into()).collect();
 
     let rt = tokio::runtime::Runtime::new().map_err(|e| {
@@ -119,7 +119,7 @@ fn consensus(candidates: Vec<Candidate>, strategy: &str) -> PyResult<ConsensusRe
     })?;
 
     let result = rt.block_on(async {
-        conroute_core::consensus(&core_candidates, strategy, None).await
+        caucus_core::consensus(&core_candidates, strategy, None).await
     });
 
     match result {
@@ -128,9 +128,9 @@ fn consensus(candidates: Vec<Candidate>, strategy: &str) -> PyResult<ConsensusRe
     }
 }
 
-/// conroute: Multi-LLM consensus engine
+/// caucus: Multi-LLM consensus engine
 #[pymodule]
-fn conroute(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn caucus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Candidate>()?;
     m.add_class::<ConsensusResult>()?;
     m.add_function(wrap_pyfunction!(consensus, m)?)?;

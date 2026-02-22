@@ -1,16 +1,16 @@
 [package]
-name = "conroute-python"
+name = "caucus-python"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Python bindings for conroute multi-LLM consensus engine"
+description = "Python bindings for caucus multi-LLM consensus engine"
 
 [lib]
-name = "conroute"
+name = "caucus"
 crate-type = ["cdylib"]
 
 [dependencies]
-conroute-core.workspace = true
+caucus-core.workspace = true
 pyo3 = { version = "0.22", features = ["extension-module"] }
 tokio.workspace = true
 serde.workspace = true

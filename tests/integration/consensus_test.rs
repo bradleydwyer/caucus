@@ -1,4 +1,4 @@
-use conroute_core::*;
+use caucus_core::*;
 
 #[tokio::test]
 async fn test_majority_vote_with_agreement() {

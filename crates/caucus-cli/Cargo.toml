@@ -1,16 +1,16 @@
 [package]
-name = "conroute-cli"
+name = "caucus-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "CLI for conroute multi-LLM consensus engine"
+description = "CLI for caucus multi-LLM consensus engine"
 
 [[bin]]
-name = "conroute"
+name = "caucus"
 path = "src/main.rs"
 
 [dependencies]
-conroute-core.workspace = true
+caucus-core.workspace = true
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -4,7 +4,7 @@ pub mod compare;
 pub mod debate;
 pub mod serve;
 
-use conroute_core::{HttpProvider, LlmProvider, MultiProvider};
+use caucus_core::{HttpProvider, LlmProvider, MultiProvider};
 
 /// Default frontier model for each provider.
 const DEFAULT_OPENAI_MODEL: &str = "gpt-5.2";
@@ -56,7 +56,7 @@ pub fn build_single_provider(model: &str) -> anyhow::Result<Box<dyn LlmProvider>
             .map_err(|_| anyhow::anyhow!("GOOGLE_API_KEY not set for model: {model}"))?;
         Ok(Box::new(HttpProvider::gemini(key, model)))
     } else if model == "mock" {
-        Ok(Box::new(conroute_core::MockProvider::fixed(
+        Ok(Box::new(caucus_core::MockProvider::fixed(
             "This is a mock response for testing.",
         )))
     } else {

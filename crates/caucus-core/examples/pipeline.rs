@@ -1,4 +1,4 @@
-use conroute_core::{MockProvider, MultiProvider, OutputFormat, Pipeline, VoteMethod};
+use caucus_core::{MockProvider, MultiProvider, OutputFormat, Pipeline, VoteMethod};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

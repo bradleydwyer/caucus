@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Args;
 use colored::Colorize;
-use conroute_core::{consensus, Candidate};
+use caucus_core::{consensus, Candidate};
 
 use super::{build_provider, build_single_provider, default_models};
 
@@ -61,7 +61,7 @@ pub async fn run(args: BenchArgs) -> anyhow::Result<()> {
     );
 
     let provider = build_provider(&models)?;
-    let judge_llm: Option<Box<dyn conroute_core::LlmProvider>> = {
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = {
         let judge_model = models.first().unwrap();
         build_single_provider(judge_model).ok()
     };
