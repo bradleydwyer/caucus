@@ -1,6 +1,5 @@
 # `caucus "What causes inflation?" -f detailed`
 
-```
 Strategy: judge_synthesis
 Agreement: 90.0%
 
@@ -185,6 +184,3 @@ Economists identify several primary causes, often overlapping. Here's a breakdow
 Banks like the Federal Reserve or ECB raise interest rates to cool demand and anchor expectations (e.g., Fed hikes from 2022–2023 brought US inflation down to ~3% by 2024).
 
 Inflation isn't always bad—deflation (falling prices) can lead to recessions (e.g., Japan 1990s). For deeper dives, check sources like IMF reports or Friedman's *Monetarism in Rhetoric and Practice*. If you have a specific country or era in mind, I can refine this!
-
-
-```
