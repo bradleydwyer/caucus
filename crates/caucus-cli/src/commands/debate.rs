@@ -25,7 +25,7 @@ pub struct DebateArgs {
 }
 
 pub async fn run(args: DebateArgs) -> anyhow::Result<()> {
-    let format = OutputFormat::from_str(&args.format)?;
+    let format: OutputFormat = args.format.parse()?;
     let models = args.models.unwrap_or_else(default_models);
 
     eprintln!(

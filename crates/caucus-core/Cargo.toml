@@ -12,7 +12,7 @@ serde_json.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.13", features = ["json"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

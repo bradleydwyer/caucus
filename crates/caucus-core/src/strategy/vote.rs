@@ -183,10 +183,10 @@ impl WeightedVote {
         if let Some(conf) = candidate.confidence {
             return conf;
         }
-        if let Some(model) = &candidate.model {
-            if let Some(w) = self.model_weights.get(model) {
-                return *w;
-            }
+        if let Some(model) = &candidate.model
+            && let Some(w) = self.model_weights.get(model)
+        {
+            return *w;
         }
         self.default_weight
     }

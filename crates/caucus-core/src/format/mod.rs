@@ -3,6 +3,7 @@ pub mod structured;
 pub mod supreme_court;
 pub mod detailed;
 
+use std::str::FromStr;
 use anyhow::Result;
 use crate::types::ConsensusResult;
 
@@ -14,8 +15,10 @@ pub enum OutputFormat {
     Detailed,
 }
 
-impl OutputFormat {
-    pub fn from_str(s: &str) -> Result<Self> {
+impl FromStr for OutputFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "plain" | "text" => Ok(Self::Plain),
             "json" => Ok(Self::Json),
@@ -24,6 +27,9 @@ impl OutputFormat {
             other => anyhow::bail!("Unknown format: {other}"),
         }
     }
+}
+
+impl OutputFormat {
 
     pub fn render(&self, result: &ConsensusResult) -> String {
         match self {

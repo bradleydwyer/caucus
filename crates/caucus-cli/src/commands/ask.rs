@@ -48,7 +48,7 @@ pub struct AskArgs {
 }
 
 pub async fn run(args: AskArgs) -> anyhow::Result<()> {
-    let format = OutputFormat::from_str(&args.format)?;
+    let format: OutputFormat = args.format.parse()?;
     let models = args.models.unwrap_or_else(default_models);
     let verbose = args.verbose;
 

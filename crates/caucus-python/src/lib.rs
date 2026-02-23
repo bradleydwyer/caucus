@@ -3,7 +3,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::types::PyDict;
 
 /// A candidate response submitted for consensus.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct Candidate {
     #[pyo3(get, set)]
@@ -48,7 +48,7 @@ impl From<&Candidate> for caucus_core::Candidate {
 }
 
 /// The result of a consensus operation.
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
 struct ConsensusResult {
     #[pyo3(get)]
@@ -75,8 +75,8 @@ impl ConsensusResult {
     }
 
     /// Serialize to a Python dict.
-    fn to_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let dict = PyDict::new_bound(py);
+    fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let dict = PyDict::new(py);
         dict.set_item("content", &self.content)?;
         dict.set_item("strategy", &self.strategy)?;
         dict.set_item("agreement_score", self.agreement_score)?;
@@ -84,7 +84,7 @@ impl ConsensusResult {
         if let Some(r) = &self.reasoning {
             dict.set_item("reasoning", r)?;
         }
-        Ok(dict.into())
+        Ok(dict.into_any().unbind())
     }
 }
 

@@ -145,7 +145,7 @@ async fn consensus_endpoint(
         })
         .collect();
 
-    let format = OutputFormat::from_str(&req.format).map_err(|e| {
+    let format: OutputFormat = req.format.parse().map_err(|e: anyhow::Error| {
         (StatusCode::BAD_REQUEST, format!("Invalid format: {e}"))
     })?;
 
@@ -196,7 +196,7 @@ async fn pipeline_endpoint(
 ) -> Result<Json<ConsensusResponse>, (StatusCode, String)> {
     use caucus_core::{Pipeline, VoteMethod};
 
-    let format = OutputFormat::from_str(&req.format).map_err(|e| {
+    let format: OutputFormat = req.format.parse().map_err(|e: anyhow::Error| {
         (StatusCode::BAD_REQUEST, format!("Invalid format: {e}"))
     })?;
 

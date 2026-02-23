@@ -192,7 +192,7 @@ impl ConsensusStrategy for MultiRoundDebate {
         let dissents: Vec<Candidate> = candidates
             .iter()
             .zip(agreement_scores.iter())
-            .filter(|(_, &score)| score < 0.3)
+            .filter(|&(_, &score)| score < 0.3)
             .map(|(c, _)| c.clone())
             .collect();
 

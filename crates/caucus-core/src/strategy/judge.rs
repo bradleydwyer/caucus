@@ -152,12 +152,12 @@ fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
         return Ok(parsed);
     }
     // Try to extract JSON from markdown code block
-    if let Some(start) = response.find('{') {
-        if let Some(end) = response.rfind('}') {
-            let json_str = &response[start..=end];
-            if let Ok(parsed) = serde_json::from_str::<JudgeResponse>(json_str) {
-                return Ok(parsed);
-            }
+    if let Some(start) = response.find('{')
+        && let Some(end) = response.rfind('}')
+    {
+        let json_str = &response[start..=end];
+        if let Ok(parsed) = serde_json::from_str::<JudgeResponse>(json_str) {
+            return Ok(parsed);
         }
     }
     anyhow::bail!("Could not parse judge response as JSON")
