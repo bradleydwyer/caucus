@@ -88,16 +88,23 @@ jobs:
             --root-url="https://github.com/${REPO}/releases/download/${TAG}" \
             local/caucus/caucus
 
+      - name: Rename bottle to single-dash filename
+        run: |
+          cd "$RUNNER_TEMP"
+          for f in caucus--*.tar.gz; do
+            mv "$f" "${f/caucus--/caucus-}"
+          done
+
       - name: Upload bottle to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BOTTLE=$(ls "${RUNNER_TEMP}"/caucus--*.tar.gz)
+          BOTTLE=$(ls "${RUNNER_TEMP}"/caucus-*.tar.gz)
           gh release upload "$TAG" "$BOTTLE" --clobber
 
       - name: Save bottle SHA256
         run: |
-          BOTTLE=$(ls "${RUNNER_TEMP}"/caucus--*.tar.gz)
+          BOTTLE=$(ls "${RUNNER_TEMP}"/caucus-*.tar.gz)
           SHA=$(shasum -a 256 "$BOTTLE" | awk '{print $1}')
           mkdir -p bottle-sha
           echo "$SHA" > "bottle-sha/${{ matrix.bottle_tag }}"
