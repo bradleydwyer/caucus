@@ -1,6 +1,5 @@
 # `caucus "What causes inflation?" -f supreme-court`
 
-```
 ═══════════════════════════════════════════
 CONSENSUS OPINION — judge_synthesis Strategy
 Agreement: 90%
@@ -180,5 +179,3 @@ Total candidates: 4
 In agreement:     4
 Dissenting:       0
 Agreement score:  90.0%
-
-```

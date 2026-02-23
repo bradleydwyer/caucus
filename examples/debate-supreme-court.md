@@ -1,6 +1,5 @@
 # `caucus "What causes inflation?" -s debate -f supreme-court -v`
 
-```
 ▶ Querying 4 model(s) with strategy 'debate'...
   · Querying gpt-5.2...
   · Querying claude-opus-4-6...
@@ -189,5 +188,3 @@ Total candidates: 4
 In agreement:     4
 Dissenting:       0
 Agreement score:  88.0%
-
-```

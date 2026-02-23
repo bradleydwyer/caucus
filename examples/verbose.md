@@ -1,6 +1,5 @@
 # `caucus "What causes inflation?" -v`
 
-```
 ▶ Querying 4 model(s) with strategy 'judge'...
   · Querying gpt-5.2...
   · Querying claude-opus-4-6...
@@ -36,4 +35,3 @@ Main drivers:
 - Housing shortages, reduced competition/market power, regulatory/tax changes, and other structural constraints can raise prices in key sectors and, if broad enough, contribute to overall inflation.
 
 Important nuance: a one-time price jump (e.g., a tax increase or a temporary oil spike) is not necessarily ongoing inflation unless it propagates into broad, continuing price increases via demand, costs, and expectations.
-```

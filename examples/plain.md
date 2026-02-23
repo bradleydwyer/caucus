@@ -1,6 +1,5 @@
 # `caucus "What causes inflation?"`
 
-```
 Inflation is a sustained, broad-based rise in the overall price level, reducing money's purchasing power. It typically occurs when **total spending (aggregate demand) persistently exceeds the economy's capacity to produce (aggregate supply)**, when **production costs rise and are passed through to prices**, or when **expectations and policy allow those increases to persist**. Main drivers:
 
 1) **Demand-pull inflation (excess demand):** Households, firms, or governments spend more than the economy can supply at current prices—often supported by strong labor markets, easy credit, large fiscal stimulus, or prolonged low interest rates.
@@ -16,4 +15,3 @@ Inflation is a sustained, broad-based rise in the overall price level, reducing 
 6) **Exchange-rate depreciation (imported inflation):** A weaker currency raises local-currency prices of imports (fuel, inputs, consumer goods), feeding into broader inflation.
 
 A key nuance: **one-time price level jumps** (e.g., a tax hike or a single commodity spike) aren't "ongoing inflation" unless they trigger continued, generalized increases via demand, expectations, or policy. In practice, episodes of high inflation usually reflect a **combination** of these forces rather than a single cause.
-```
