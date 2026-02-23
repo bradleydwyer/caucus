@@ -1,5 +1,7 @@
 # caucus
 
+> **Work in progress.** This is an active experiment exploring whether multi-LLM consensus actually produces better results than a single good model. APIs, output formats, and strategies may change without notice.
+
 Multi-LLM consensus engine — composable strategies for aggregating and synthesizing outputs from multiple LLMs.
 
 ## About

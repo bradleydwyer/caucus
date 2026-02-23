@@ -28,6 +28,11 @@ pub fn default_models() -> Vec<String> {
         models.push(DEFAULT_XAI_MODEL.to_string());
     }
     if models.is_empty() {
+        eprintln!(
+            "⚠ No API keys found. Set at least one of: ANTHROPIC_API_KEY, OPENAI_API_KEY, \
+             GOOGLE_API_KEY, XAI_API_KEY\n  \
+             Falling back to mock provider. Use --env <path> to load a .env file."
+        );
         models.push("mock".to_string());
     }
     models

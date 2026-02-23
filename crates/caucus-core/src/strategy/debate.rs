@@ -46,9 +46,10 @@ Here are the current positions from all participants:
 {positions}
 
 This is round {round} of {max_rounds}. \
-Review the other positions and refine your answer. \
-If you've changed your mind on any points, explain why. \
-If you maintain your position, strengthen your argument.";
+Consider the strengths and weaknesses of each position, then produce a single, \
+standalone answer to the original question. Do NOT reference the other positions, \
+the debate process, or \"other participants\" — write as if you are the sole author \
+giving a definitive response.";
 
 const DEBATE_JUDGE_PROMPT: &str = "\
 Below is a synthesis produced by a multi-round debate, followed by the {count} original \

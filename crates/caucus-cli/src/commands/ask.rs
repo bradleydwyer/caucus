@@ -1,4 +1,7 @@
-use caucus_core::{Candidate, ConsensusResult, OutputFormat, consensus};
+use caucus_core::strategy::debate::DebateConfig;
+use caucus_core::{
+    Candidate, ConsensusResult, ConsensusStrategy, MultiRoundDebate, OutputFormat, consensus,
+};
 use clap::Args;
 use colored::Colorize;
 
@@ -140,7 +143,15 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
         None
     };
 
-    let result = consensus(&candidates, &args.strategy, judge_llm.as_deref()).await?;
+    let result = if is_debate_strategy(&args.strategy) {
+        let strategy = MultiRoundDebate::with_config(DebateConfig {
+            max_rounds: args.rounds,
+            ..Default::default()
+        });
+        strategy.resolve(&candidates, judge_llm.as_deref()).await?
+    } else {
+        consensus(&candidates, &args.strategy, judge_llm.as_deref()).await?
+    };
 
     if verbose {
         eprintln!(
@@ -154,6 +165,10 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
     println!("{}", format.render(&result));
 
     Ok(())
+}
+
+fn is_debate_strategy(name: &str) -> bool {
+    matches!(name, "debate" | "multi_round_debate" | "multi-round-debate")
 }
 
 fn strategy_needs_llm(name: &str) -> bool {
