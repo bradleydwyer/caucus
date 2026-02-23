@@ -28,8 +28,6 @@ jobs:
             bottle_tag: arm64_sequoia
           - os: macos-14
             bottle_tag: arm64_sonoma
-          - os: macos-13
-            bottle_tag: ventura
     runs-on: ${{ matrix.os }}
     env:
       TAG: ${{ github.ref_name }}
@@ -136,7 +134,6 @@ jobs:
         run: |
           echo "arm64_sequoia=$(cat bottle-shas/arm64_sequoia)" >> "$GITHUB_OUTPUT"
           echo "arm64_sonoma=$(cat bottle-shas/arm64_sonoma)" >> "$GITHUB_OUTPUT"
-          echo "ventura=$(cat bottle-shas/ventura)" >> "$GITHUB_OUTPUT"
 
       - name: Check out tap repository
         uses: actions/checkout@v4
@@ -150,7 +147,6 @@ jobs:
           SOURCE_SHA: ${{ steps.source.outputs.sha256 }}
           ARM64_SEQUOIA_SHA: ${{ steps.bottles.outputs.arm64_sequoia }}
           ARM64_SONOMA_SHA: ${{ steps.bottles.outputs.arm64_sonoma }}
-          VENTURA_SHA: ${{ steps.bottles.outputs.ventura }}
         run: |
           cat > homebrew-caucus/Formula/caucus.rb <<EOF
           class Caucus < Formula
@@ -164,7 +160,6 @@ jobs:
               root_url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}"
               sha256 cellar: :any_skip_relocation, arm64_sequoia: "${ARM64_SEQUOIA_SHA}"
               sha256 cellar: :any_skip_relocation, arm64_sonoma:  "${ARM64_SONOMA_SHA}"
-              sha256 cellar: :any_skip_relocation, ventura:       "${VENTURA_SHA}"
             end
 
             depends_on "rust" => :build
