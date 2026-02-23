@@ -10,6 +10,7 @@ use caucus_core::{HttpProvider, LlmProvider, MultiProvider};
 const DEFAULT_OPENAI_MODEL: &str = "gpt-5.2";
 const DEFAULT_ANTHROPIC_MODEL: &str = "claude-opus-4-6";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-3.1-pro-preview";
+const DEFAULT_XAI_MODEL: &str = "grok-4-1-fast-reasoning";
 
 /// Return the default models based on which API keys are configured.
 pub fn default_models() -> Vec<String> {
@@ -22,6 +23,9 @@ pub fn default_models() -> Vec<String> {
     }
     if std::env::var("GOOGLE_API_KEY").is_ok() {
         models.push(DEFAULT_GEMINI_MODEL.to_string());
+    }
+    if std::env::var("XAI_API_KEY").is_ok() {
+        models.push(DEFAULT_XAI_MODEL.to_string());
     }
     if models.is_empty() {
         models.push("mock".to_string());
@@ -55,6 +59,10 @@ pub fn build_single_provider(model: &str) -> anyhow::Result<Box<dyn LlmProvider>
         let key = std::env::var("GOOGLE_API_KEY")
             .map_err(|_| anyhow::anyhow!("GOOGLE_API_KEY not set for model: {model}"))?;
         Ok(Box::new(HttpProvider::gemini(key, model)))
+    } else if model.starts_with("grok-") {
+        let key = std::env::var("XAI_API_KEY")
+            .map_err(|_| anyhow::anyhow!("XAI_API_KEY not set for model: {model}"))?;
+        Ok(Box::new(HttpProvider::xai(key, model)))
     } else if model == "mock" {
         Ok(Box::new(caucus_core::MockProvider::fixed("This is a mock response for testing.")))
     } else {

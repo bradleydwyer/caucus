@@ -65,6 +65,11 @@ impl HttpProvider {
     pub fn gemini(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::new("https://generativelanguage.googleapis.com", api_key, model)
     }
+
+    /// Create a provider for the xAI (Grok) API.
+    pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::new("https://api.x.ai/v1", api_key, model)
+    }
 }
 
 #[async_trait]

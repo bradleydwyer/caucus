@@ -43,12 +43,13 @@ Then: `from caucus import consensus, Candidate`
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
 export GOOGLE_API_KEY=AI...
+export XAI_API_KEY=xai-...
 
 # Just ask — queries all configured models, synthesizes the best answer
 caucus "What causes inflation?"
 
 # Pick your models
-caucus "What causes inflation?" -m gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview
+caucus "What causes inflation?" -m gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview,grok-4-1-fast-reasoning
 
 # See what's happening under the hood
 caucus "What causes inflation?" -v
@@ -73,12 +74,14 @@ With a single model, caucus skips consensus and returns the response directly.
 
 ## Output formats
 
-| Format | Use case |
-|--------|----------|
-| `plain` | Just the consensus text (default) |
-| `json` | Full result with metadata, for programmatic use |
-| `supreme-court` | Majority opinion + concurrences + dissents + vote summary |
-| `detailed` | Full transcript with all candidates and process info |
+| Format | Use case | Example |
+|--------|----------|---------|
+| `plain` | Just the consensus text (default) | [plain.txt](examples/plain.txt) |
+| `json` | Full result with metadata, for programmatic use | [json.txt](examples/json.txt) |
+| `supreme-court` | Majority opinion + concurrences + dissents + vote summary | [supreme-court.txt](examples/supreme-court.txt) |
+| `detailed` | Full transcript with all candidates and process info | [detailed.txt](examples/detailed.txt) |
+
+See also: [verbose output](examples/verbose.txt), [debate strategy with supreme-court format](examples/debate-supreme-court.txt)
 
 ## CLI commands
 
@@ -149,6 +152,7 @@ API keys are read from environment variables. You can set them directly or use a
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 GOOGLE_API_KEY=AI...
+XAI_API_KEY=xai-...
 ```
 
 The CLI auto-loads `.env` from the current directory, or you can specify a path with `--env path/to/.env`.
