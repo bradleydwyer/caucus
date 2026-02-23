@@ -76,12 +76,12 @@ With a single model, caucus skips consensus and returns the response directly.
 
 | Format | Use case | Example |
 |--------|----------|---------|
-| `plain` | Just the consensus text (default) | [plain.txt](examples/plain.txt) |
-| `json` | Full result with metadata, for programmatic use | [json.txt](examples/json.txt) |
-| `supreme-court` | Majority opinion + concurrences + dissents + vote summary | [supreme-court.txt](examples/supreme-court.txt) |
-| `detailed` | Full transcript with all candidates and process info | [detailed.txt](examples/detailed.txt) |
+| `plain` | Just the consensus text (default) | [plain.md](examples/plain.md) |
+| `json` | Full result with metadata, for programmatic use | [json.md](examples/json.md) |
+| `supreme-court` | Majority opinion + concurrences + dissents + vote summary | [supreme-court.md](examples/supreme-court.md) |
+| `detailed` | Full transcript with all candidates and process info | [detailed.md](examples/detailed.md) |
 
-See also: [verbose output](examples/verbose.txt), [debate strategy with supreme-court format](examples/debate-supreme-court.txt)
+See also: [verbose output](examples/verbose.md), [debate strategy with supreme-court format](examples/debate-supreme-court.md)
 
 ## CLI commands
 
