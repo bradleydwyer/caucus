@@ -29,7 +29,7 @@ pub mod strategy;
 pub mod types;
 
 // Re-export primary types at the crate root for convenience.
-pub use pipeline::{consensus, strategy_from_name, Pipeline, VoteMethod};
+pub use pipeline::{Pipeline, VoteMethod, consensus, strategy_from_name};
 pub use provider::{HttpProvider, MockProvider, MultiProvider};
 pub use types::{Candidate, ConsensusResult, ConsensusStrategy, LlmProvider};
 

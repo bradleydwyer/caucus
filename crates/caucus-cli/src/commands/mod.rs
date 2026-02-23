@@ -56,9 +56,7 @@ pub fn build_single_provider(model: &str) -> anyhow::Result<Box<dyn LlmProvider>
             .map_err(|_| anyhow::anyhow!("GOOGLE_API_KEY not set for model: {model}"))?;
         Ok(Box::new(HttpProvider::gemini(key, model)))
     } else if model == "mock" {
-        Ok(Box::new(caucus_core::MockProvider::fixed(
-            "This is a mock response for testing.",
-        )))
+        Ok(Box::new(caucus_core::MockProvider::fixed("This is a mock response for testing.")))
     } else {
         // Default to OpenAI-compatible API
         let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();

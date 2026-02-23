@@ -17,10 +17,7 @@ pub struct SemanticClustering {
 
 impl Default for SemanticClustering {
     fn default() -> Self {
-        Self {
-            similarity_threshold: 0.75,
-            synthesize: false,
-        }
+        Self { similarity_threshold: 0.75, synthesize: false }
     }
 }
 
@@ -126,10 +123,8 @@ impl ConsensusStrategy for SemanticClustering {
         let agreement_score = winning_cluster.len() as f64 / candidates.len() as f64;
 
         // Find centroid-nearest candidate in the winning cluster
-        let cluster_embs: Vec<&Vec<f64>> = winning_cluster
-            .iter()
-            .map(|&idx| &embeddings[idx])
-            .collect();
+        let cluster_embs: Vec<&Vec<f64>> =
+            winning_cluster.iter().map(|&idx| &embeddings[idx]).collect();
         let center = centroid(&cluster_embs);
 
         let best_idx = *winning_cluster
@@ -145,13 +140,7 @@ impl ConsensusStrategy for SemanticClustering {
             // Ask the LLM to synthesize from the winning cluster
             let cluster_texts: Vec<String> = winning_cluster
                 .iter()
-                .map(|&i| {
-                    format!(
-                        "--- Response {} ---\n{}",
-                        i + 1,
-                        candidates[i].content.clone()
-                    )
-                })
+                .map(|&i| format!("--- Response {} ---\n{}", i + 1, candidates[i].content.clone()))
                 .collect();
 
             let prompt = format!(

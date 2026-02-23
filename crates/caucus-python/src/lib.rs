@@ -1,5 +1,5 @@
-use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 /// A candidate response submitted for consensus.
@@ -19,11 +19,7 @@ impl Candidate {
     #[new]
     #[pyo3(signature = (content, model=None, confidence=None))]
     fn new(content: String, model: Option<String>, confidence: Option<f64>) -> Self {
-        Self {
-            content,
-            model,
-            confidence,
-        }
+        Self { content, model, confidence }
     }
 
     fn __repr__(&self) -> String {
@@ -114,13 +110,11 @@ fn consensus(candidates: Vec<Candidate>, strategy: &str) -> PyResult<ConsensusRe
     let core_candidates: Vec<caucus_core::Candidate> =
         candidates.iter().map(|c| c.into()).collect();
 
-    let rt = tokio::runtime::Runtime::new().map_err(|e| {
-        PyValueError::new_err(format!("Failed to create runtime: {e}"))
-    })?;
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| PyValueError::new_err(format!("Failed to create runtime: {e}")))?;
 
-    let result = rt.block_on(async {
-        caucus_core::consensus(&core_candidates, strategy, None).await
-    });
+    let result =
+        rt.block_on(async { caucus_core::consensus(&core_candidates, strategy, None).await });
 
     match result {
         Ok(r) => Ok(r.into()),

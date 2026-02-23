@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
+use caucus_core::{Candidate, consensus};
 use clap::Args;
 use colored::Colorize;
-use caucus_core::{consensus, Candidate};
 
 use super::{build_provider, build_single_provider, default_models};
 
@@ -101,9 +101,10 @@ pub async fn run(args: BenchArgs) -> anyhow::Result<()> {
 
             match result {
                 Ok(result) => {
-                    let matched = test_case.expected.as_ref().map(|exp| {
-                        result.content.to_lowercase().contains(&exp.to_lowercase())
-                    });
+                    let matched = test_case
+                        .expected
+                        .as_ref()
+                        .map(|exp| result.content.to_lowercase().contains(&exp.to_lowercase()));
 
                     let status = match matched {
                         Some(true) => "✓".green(),

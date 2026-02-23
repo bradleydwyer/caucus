@@ -16,10 +16,7 @@ pub struct JudgeSynthesis {
 
 impl Default for JudgeSynthesis {
     fn default() -> Self {
-        Self {
-            system_prompt: DEFAULT_JUDGE_SYSTEM.to_string(),
-            rubric: None,
-        }
+        Self { system_prompt: DEFAULT_JUDGE_SYSTEM.to_string(), rubric: None }
     }
 }
 
@@ -63,11 +60,8 @@ impl JudgeSynthesis {
             .iter()
             .enumerate()
             .map(|(i, c)| {
-                let model_info = c
-                    .model
-                    .as_ref()
-                    .map(|m| format!(" (model: {m})"))
-                    .unwrap_or_default();
+                let model_info =
+                    c.model.as_ref().map(|m| format!(" (model: {m})")).unwrap_or_default();
                 format!("--- Response {}{}---\n{}", i + 1, model_info, c.content)
             })
             .collect::<Vec<_>>()
@@ -107,11 +101,8 @@ impl ConsensusStrategy for JudgeSynthesis {
 
         // Try to parse structured JSON response
         if let Ok(parsed) = parse_judge_response(&response) {
-            let dissents: Vec<Candidate> = parsed
-                .dissent_indices
-                .iter()
-                .filter_map(|&i| candidates.get(i).cloned())
-                .collect();
+            let dissents: Vec<Candidate> =
+                parsed.dissent_indices.iter().filter_map(|&i| candidates.get(i).cloned()).collect();
 
             Ok(ConsensusResult {
                 content: parsed.synthesis,

@@ -19,12 +19,7 @@ pub struct Candidate {
 
 impl Candidate {
     pub fn new(content: impl Into<String>) -> Self {
-        Self {
-            content: content.into(),
-            model: None,
-            confidence: None,
-            metadata: HashMap::new(),
-        }
+        Self { content: content.into(), model: None, confidence: None, metadata: HashMap::new() }
     }
 
     pub fn with_model(mut self, model: impl Into<String>) -> Self {

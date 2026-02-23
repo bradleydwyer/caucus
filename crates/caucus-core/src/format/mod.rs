@@ -1,11 +1,11 @@
+pub mod detailed;
 pub mod plain;
 pub mod structured;
 pub mod supreme_court;
-pub mod detailed;
 
-use std::str::FromStr;
-use anyhow::Result;
 use crate::types::ConsensusResult;
+use anyhow::Result;
+use std::str::FromStr;
 
 /// Output format for rendering consensus results.
 pub enum OutputFormat {
@@ -30,7 +30,6 @@ impl FromStr for OutputFormat {
 }
 
 impl OutputFormat {
-
     pub fn render(&self, result: &ConsensusResult) -> String {
         match self {
             Self::Plain => plain::render(result),

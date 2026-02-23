@@ -1,6 +1,6 @@
+use caucus_core::{Candidate, ConsensusResult, OutputFormat, consensus};
 use clap::Args;
 use colored::Colorize;
-use caucus_core::{consensus, Candidate, ConsensusResult, OutputFormat};
 
 use super::{build_single_provider, default_models};
 
@@ -106,10 +106,7 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
     // Single model shortcut: skip consensus, just print the response directly
     if candidates.len() == 1 && args.strategy == "judge" {
         if verbose {
-            eprintln!(
-                "{} Single model — returning response directly\n",
-                "✓".green(),
-            );
+            eprintln!("{} Single model — returning response directly\n", "✓".green(),);
         }
         let result = ConsensusResult {
             content: candidates[0].content.clone(),
@@ -134,21 +131,16 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
     }
 
     // Run consensus
-    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> =
-        if strategy_needs_llm(&args.strategy) {
-            // Use the first model as the judge
-            let judge_model = models.first().unwrap();
-            Some(build_single_provider(judge_model)?)
-        } else {
-            None
-        };
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = if strategy_needs_llm(&args.strategy)
+    {
+        // Use the first model as the judge
+        let judge_model = models.first().unwrap();
+        Some(build_single_provider(judge_model)?)
+    } else {
+        None
+    };
 
-    let result = consensus(
-        &candidates,
-        &args.strategy,
-        judge_llm.as_deref(),
-    )
-    .await?;
+    let result = consensus(&candidates, &args.strategy, judge_llm.as_deref()).await?;
 
     if verbose {
         eprintln!(
@@ -167,8 +159,13 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
 fn strategy_needs_llm(name: &str) -> bool {
     matches!(
         name,
-        "judge" | "judge_synthesis" | "judge-synthesis"
-            | "debate" | "multi_round_debate" | "multi-round-debate"
-            | "debate_then_vote" | "debate-then-vote"
+        "judge"
+            | "judge_synthesis"
+            | "judge-synthesis"
+            | "debate"
+            | "multi_round_debate"
+            | "multi-round-debate"
+            | "debate_then_vote"
+            | "debate-then-vote"
     )
 }

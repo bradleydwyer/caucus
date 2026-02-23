@@ -17,9 +17,7 @@ pub struct MajorityVote {
 
 impl Default for MajorityVote {
     fn default() -> Self {
-        Self {
-            similarity_threshold: 0.8,
-        }
+        Self { similarity_threshold: 0.8 }
     }
 }
 
@@ -53,10 +51,7 @@ fn bigram_similarity(a: &str, b: &str) -> f64 {
         return 0.0;
     }
 
-    let matches = bigrams_a
-        .iter()
-        .filter(|bg| bigrams_b.contains(bg))
-        .count();
+    let matches = bigrams_a.iter().filter(|bg| bigrams_b.contains(bg)).count();
 
     (2.0 * matches as f64) / (bigrams_a.len() + bigrams_b.len()) as f64
 }
@@ -117,8 +112,7 @@ impl ConsensusStrategy for MajorityVote {
         let winner = &candidates[winning_group[0]];
 
         // Collect dissents (candidates not in the winning group)
-        let winning_set: std::collections::HashSet<usize> =
-            winning_group.iter().copied().collect();
+        let winning_set: std::collections::HashSet<usize> = winning_group.iter().copied().collect();
         let dissents: Vec<Candidate> = candidates
             .iter()
             .enumerate()
@@ -155,11 +149,7 @@ pub struct WeightedVote {
 
 impl Default for WeightedVote {
     fn default() -> Self {
-        Self {
-            similarity_threshold: 0.8,
-            default_weight: 1.0,
-            model_weights: HashMap::new(),
-        }
+        Self { similarity_threshold: 0.8, default_weight: 1.0, model_weights: HashMap::new() }
     }
 }
 
@@ -262,8 +252,7 @@ impl ConsensusStrategy for WeightedVote {
             })
             .unwrap();
 
-        let winning_set: std::collections::HashSet<usize> =
-            winning_group.iter().copied().collect();
+        let winning_set: std::collections::HashSet<usize> = winning_group.iter().copied().collect();
         let dissents: Vec<Candidate> = candidates
             .iter()
             .enumerate()

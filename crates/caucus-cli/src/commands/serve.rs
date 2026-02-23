@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     routing::{get, post},
-    Json, Router,
 };
 use clap::Args;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
-use caucus_core::{consensus, Candidate, ConsensusResult, OutputFormat};
+use caucus_core::{Candidate, ConsensusResult, OutputFormat, consensus};
 
 use super::build_single_provider;
 
@@ -47,11 +47,7 @@ pub async fn run(args: ServeArgs) -> anyhow::Result<()> {
         .layer(tower_http::cors::CorsLayer::permissive());
 
     let addr = format!("{}:{}", args.host, args.port);
-    eprintln!(
-        "{} caucus API server listening on {}",
-        "▶".green(),
-        addr.cyan(),
-    );
+    eprintln!("{} caucus API server listening on {}", "▶".green(), addr.cyan(),);
     eprintln!("  POST /v1/consensus  — Run consensus on candidates");
     eprintln!("  POST /v1/pipeline   — Run a multi-step pipeline");
     eprintln!("  GET  /health        — Health check");
@@ -128,11 +124,7 @@ async fn consensus_endpoint(
         .into_iter()
         .map(|input| match input {
             CandidateInput::Text(text) => Candidate::new(text),
-            CandidateInput::Full {
-                content,
-                model,
-                confidence,
-            } => {
+            CandidateInput::Full { content, model, confidence } => {
                 let mut c = Candidate::new(content);
                 if let Some(m) = model {
                     c = c.with_model(m);
@@ -145,12 +137,14 @@ async fn consensus_endpoint(
         })
         .collect();
 
-    let format: OutputFormat = req.format.parse().map_err(|e: anyhow::Error| {
-        (StatusCode::BAD_REQUEST, format!("Invalid format: {e}"))
-    })?;
+    let format: OutputFormat = req
+        .format
+        .parse()
+        .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Invalid format: {e}")))?;
 
     // Build judge LLM if needed
-    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = if strategy_needs_llm(&req.strategy) {
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = if strategy_needs_llm(&req.strategy)
+    {
         // Try to use the first candidate's model, or fall back to env-configured default
         let model_name = candidates
             .first()
@@ -163,9 +157,7 @@ async fn consensus_endpoint(
 
     let result = consensus(&candidates, &req.strategy, judge_llm.as_deref())
         .await
-        .map_err(|e| {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Consensus error: {e}"))
-        })?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Consensus error: {e}")))?;
 
     Ok(Json(ConsensusResponse::from((result, &format))))
 }
@@ -196,9 +188,10 @@ async fn pipeline_endpoint(
 ) -> Result<Json<ConsensusResponse>, (StatusCode, String)> {
     use caucus_core::{Pipeline, VoteMethod};
 
-    let format: OutputFormat = req.format.parse().map_err(|e: anyhow::Error| {
-        (StatusCode::BAD_REQUEST, format!("Invalid format: {e}"))
-    })?;
+    let format: OutputFormat = req
+        .format
+        .parse()
+        .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Invalid format: {e}")))?;
 
     let mut pipeline = Pipeline::new();
 
@@ -215,30 +208,22 @@ async fn pipeline_endpoint(
             }
             "judge" | "synthesize" => pipeline.judge(),
             other => {
-                return Err((
-                    StatusCode::BAD_REQUEST,
-                    format!("Unknown pipeline step: {other}"),
-                ));
+                return Err((StatusCode::BAD_REQUEST, format!("Unknown pipeline step: {other}")));
             }
         };
     }
 
-    let provider = super::build_provider(&req.models).map_err(|e| {
-        (StatusCode::BAD_REQUEST, format!("Provider error: {e}"))
-    })?;
+    let provider = super::build_provider(&req.models)
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Provider error: {e}")))?;
 
     // Use first model as judge
-    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = req
-        .models
-        .first()
-        .and_then(|m| build_single_provider(m).ok());
+    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> =
+        req.models.first().and_then(|m| build_single_provider(m).ok());
 
     let result = pipeline
         .run(&req.prompt, &provider, judge_llm.as_deref())
         .await
-        .map_err(|e| {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Pipeline error: {e}"))
-        })?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Pipeline error: {e}")))?;
 
     Ok(Json(ConsensusResponse::from((result, &format))))
 }
@@ -246,9 +231,14 @@ async fn pipeline_endpoint(
 fn strategy_needs_llm(name: &str) -> bool {
     matches!(
         name,
-        "judge" | "judge_synthesis" | "judge-synthesis"
-            | "debate" | "multi_round_debate" | "multi-round-debate"
-            | "debate_then_vote" | "debate-then-vote"
+        "judge"
+            | "judge_synthesis"
+            | "judge-synthesis"
+            | "debate"
+            | "multi_round_debate"
+            | "multi-round-debate"
+            | "debate_then_vote"
+            | "debate-then-vote"
     )
 }
 
@@ -338,9 +328,7 @@ async fn run_mcp() -> anyhow::Result<()> {
                         let candidate_texts: Vec<String> = args["candidates"]
                             .as_array()
                             .map(|arr| {
-                                arr.iter()
-                                    .filter_map(|v| v.as_str().map(String::from))
-                                    .collect()
+                                arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()
                             })
                             .unwrap_or_default();
 

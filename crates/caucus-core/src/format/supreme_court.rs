@@ -34,11 +34,7 @@ pub fn render(result: &ConsensusResult) -> String {
         .candidates
         .iter()
         .filter(|c| {
-            !result
-                .dissents
-                .iter()
-                .any(|d| d.content == c.content)
-                && c.content != result.content
+            !result.dissents.iter().any(|d| d.content == c.content) && c.content != result.content
         })
         .collect();
 

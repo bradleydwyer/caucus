@@ -15,10 +15,19 @@ fn needs_subcommand_injection(args: &[String]) -> bool {
         let arg = args[i].as_str();
         match arg {
             "--help" | "-h" | "--version" | "-V" => return false,
-            "--env" => { i += 2; continue; }         // --env <path>
-            _ if arg.starts_with("--env=") => { i += 1; continue; }
-            _ if arg.starts_with('-') => { i += 1; continue; } // skip subcommand flags
-            _ => return !subcommands.contains(&arg),  // first positional arg
+            "--env" => {
+                i += 2;
+                continue;
+            } // --env <path>
+            _ if arg.starts_with("--env=") => {
+                i += 1;
+                continue;
+            }
+            _ if arg.starts_with('-') => {
+                i += 1;
+                continue;
+            } // skip subcommand flags
+            _ => return !subcommands.contains(&arg), // first positional arg
         }
     }
     false // no positional args → show help
@@ -55,8 +64,7 @@ enum Commands {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("caucus=info".parse()?),
+            tracing_subscriber::EnvFilter::from_default_env().add_directive("caucus=info".parse()?),
         )
         .init();
 

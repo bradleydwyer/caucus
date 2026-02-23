@@ -18,7 +18,9 @@ async fn test_majority_vote_with_agreement() {
 async fn test_weighted_vote_with_confidence() {
     let candidates = vec![
         Candidate::new("The answer is 42").with_confidence(0.95).with_model("expert-model"),
-        Candidate::new("Something completely unrelated to anything").with_confidence(0.1).with_model("bad-model"),
+        Candidate::new("Something completely unrelated to anything")
+            .with_confidence(0.1)
+            .with_model("bad-model"),
         Candidate::new("The answer is 42").with_confidence(0.85).with_model("good-model"),
     ];
 

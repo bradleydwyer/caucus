@@ -1,6 +1,6 @@
+use caucus_core::{Candidate, OutputFormat, consensus};
 use clap::Args;
 use colored::Colorize;
-use caucus_core::{consensus, Candidate, OutputFormat};
 
 use super::{build_provider, build_single_provider, default_models};
 
@@ -40,9 +40,8 @@ pub async fn run(args: CompareArgs) -> anyhow::Result<()> {
     let mut candidates = Vec::new();
 
     for model in &models {
-        let llm = provider
-            .get(model)
-            .ok_or_else(|| anyhow::anyhow!("No provider for model: {model}"))?;
+        let llm =
+            provider.get(model).ok_or_else(|| anyhow::anyhow!("No provider for model: {model}"))?;
 
         eprintln!("  {} Querying {}...", "·".dimmed(), model.yellow());
         match llm.complete(&args.prompt, None).await {
@@ -73,11 +72,7 @@ pub async fn run(args: CompareArgs) -> anyhow::Result<()> {
 
     // Run each strategy
     for strategy_name in &args.strategies {
-        eprintln!(
-            "{} Running strategy: {}",
-            "▶".green(),
-            strategy_name.cyan(),
-        );
+        eprintln!("{} Running strategy: {}", "▶".green(), strategy_name.cyan(),);
 
         let result = consensus(&candidates, strategy_name, judge_llm.as_deref()).await;
 

@@ -51,9 +51,7 @@ If you maintain your position, strengthen your argument.";
 
 impl MultiRoundDebate {
     pub fn new() -> Self {
-        Self {
-            config: DebateConfig::default(),
-        }
+        Self { config: DebateConfig::default() }
     }
 
     pub fn with_config(config: DebateConfig) -> Self {
@@ -140,10 +138,8 @@ impl ConsensusStrategy for MultiRoundDebate {
                 .iter()
                 .enumerate()
                 .map(|(i, pos)| {
-                    let model = candidates
-                        .get(i)
-                        .and_then(|c| c.model.as_deref())
-                        .unwrap_or("Participant");
+                    let model =
+                        candidates.get(i).and_then(|c| c.model.as_deref()).unwrap_or("Participant");
                     format!("--- {} (Position {}) ---\n{}", model, i + 1, pos)
                 })
                 .collect::<Vec<_>>()
@@ -156,9 +152,7 @@ impl ConsensusStrategy for MultiRoundDebate {
                 .replace("{max_rounds}", &self.config.max_rounds.to_string());
 
             // Have the LLM produce a refined position
-            let refined = llm
-                .complete(&prompt, Some(&self.config.system_prompt))
-                .await?;
+            let refined = llm.complete(&prompt, Some(&self.config.system_prompt)).await?;
 
             // Check convergence: compare refined with each current position
             let max_similarity = current_positions
@@ -172,7 +166,11 @@ impl ConsensusStrategy for MultiRoundDebate {
             round_history.push(current_positions.clone());
 
             if max_similarity >= self.config.convergence_threshold {
-                tracing::info!("Debate converged at round {} (similarity: {:.2})", round, max_similarity);
+                tracing::info!(
+                    "Debate converged at round {} (similarity: {:.2})",
+                    round,
+                    max_similarity
+                );
                 break;
             }
         }
@@ -181,10 +179,8 @@ impl ConsensusStrategy for MultiRoundDebate {
         let final_position = current_positions.into_iter().next().unwrap_or_default();
 
         // Calculate agreement between final position and original candidates
-        let agreement_scores: Vec<f64> = candidates
-            .iter()
-            .map(|c| text_similarity(&final_position, &c.content))
-            .collect();
+        let agreement_scores: Vec<f64> =
+            candidates.iter().map(|c| text_similarity(&final_position, &c.content)).collect();
         let avg_agreement =
             agreement_scores.iter().sum::<f64>() / agreement_scores.len().max(1) as f64;
 
@@ -197,14 +193,8 @@ impl ConsensusStrategy for MultiRoundDebate {
             .collect();
 
         let mut metadata = HashMap::new();
-        metadata.insert(
-            "rounds_completed".to_string(),
-            serde_json::json!(actual_rounds),
-        );
-        metadata.insert(
-            "round_history".to_string(),
-            serde_json::json!(round_history),
-        );
+        metadata.insert("rounds_completed".to_string(), serde_json::json!(actual_rounds));
+        metadata.insert("round_history".to_string(), serde_json::json!(round_history));
 
         Ok(ConsensusResult {
             content: final_position,

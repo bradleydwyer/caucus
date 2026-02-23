@@ -11,10 +11,7 @@ pub struct MockProvider {
 
 impl MockProvider {
     pub fn new(responses: Vec<String>) -> Self {
-        Self {
-            responses,
-            index: std::sync::atomic::AtomicUsize::new(0),
-        }
+        Self { responses, index: std::sync::atomic::AtomicUsize::new(0) }
     }
 
     /// Create a mock that always returns the same response.
@@ -41,7 +38,11 @@ pub struct HttpProvider {
 }
 
 impl HttpProvider {
-    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>, model: impl Into<String>) -> Self {
+    pub fn new(
+        base_url: impl Into<String>,
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+    ) -> Self {
         Self {
             client: reqwest::Client::new(),
             base_url: base_url.into(),
@@ -189,9 +190,7 @@ pub struct MultiProvider {
 
 impl MultiProvider {
     pub fn new() -> Self {
-        Self {
-            providers: Vec::new(),
-        }
+        Self { providers: Vec::new() }
     }
 
     /// Register a provider for a specific model name.
@@ -202,10 +201,7 @@ impl MultiProvider {
 
     /// Get the provider for a given model name.
     pub fn get(&self, model: &str) -> Option<&dyn LlmProvider> {
-        self.providers
-            .iter()
-            .find(|(name, _)| name == model)
-            .map(|(_, p)| p.as_ref())
+        self.providers.iter().find(|(name, _)| name == model).map(|(_, p)| p.as_ref())
     }
 
     /// List all registered model names.

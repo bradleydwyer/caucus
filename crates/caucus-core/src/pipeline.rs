@@ -16,16 +16,9 @@ pub struct Pipeline {
 }
 
 enum PipelineStep {
-    Generate {
-        models: Vec<String>,
-    },
-    Debate {
-        max_rounds: usize,
-        convergence_threshold: f64,
-    },
-    Vote {
-        method: VoteMethod,
-    },
+    Generate { models: Vec<String> },
+    Debate { max_rounds: usize, convergence_threshold: f64 },
+    Vote { method: VoteMethod },
     Judge,
     Synthesize,
 }
@@ -49,19 +42,13 @@ impl Pipeline {
 
     /// Add a debate step: candidates debate over multiple rounds.
     pub fn debate(mut self, max_rounds: usize) -> Self {
-        self.steps.push(PipelineStep::Debate {
-            max_rounds,
-            convergence_threshold: 0.9,
-        });
+        self.steps.push(PipelineStep::Debate { max_rounds, convergence_threshold: 0.9 });
         self
     }
 
     /// Add a debate step with custom convergence threshold.
     pub fn debate_with_convergence(mut self, max_rounds: usize, threshold: f64) -> Self {
-        self.steps.push(PipelineStep::Debate {
-            max_rounds,
-            convergence_threshold: threshold,
-        });
+        self.steps.push(PipelineStep::Debate { max_rounds, convergence_threshold: threshold });
         self
     }
 
@@ -98,21 +85,19 @@ impl Pipeline {
                 PipelineStep::Generate { models } => {
                     candidates = generate_step(prompt, models, provider).await?;
                 }
-                PipelineStep::Debate {
-                    max_rounds,
-                    convergence_threshold,
-                } => {
+                PipelineStep::Debate { max_rounds, convergence_threshold } => {
                     let strategy = MultiRoundDebate::with_config(DebateConfig {
                         max_rounds: *max_rounds,
                         convergence_threshold: *convergence_threshold,
                         ..Default::default()
                     });
-                    let llm = judge_llm.ok_or_else(|| {
-                        anyhow::anyhow!("Debate step requires a judge LLM")
-                    })?;
+                    let llm = judge_llm
+                        .ok_or_else(|| anyhow::anyhow!("Debate step requires a judge LLM"))?;
                     let result = strategy.resolve(&candidates, Some(llm)).await?;
-                    candidates = vec![Candidate::new(&result.content)
-                        .with_metadata("source", serde_json::json!("debate"))];
+                    candidates = vec![
+                        Candidate::new(&result.content)
+                            .with_metadata("source", serde_json::json!("debate")),
+                    ];
                     // Keep original candidates too
                     for c in &result.candidates {
                         candidates.push(c.clone());
@@ -134,9 +119,7 @@ impl Pipeline {
                     let llm = judge_llm.ok_or_else(|| {
                         anyhow::anyhow!("Judge/Synthesize step requires a judge LLM")
                     })?;
-                    let result = JudgeSynthesis::new()
-                        .resolve(&candidates, Some(llm))
-                        .await?;
+                    let result = JudgeSynthesis::new().resolve(&candidates, Some(llm)).await?;
                     last_result = Some(result);
                 }
             }
@@ -224,11 +207,7 @@ mod tests {
             .add("model-c", MockProvider::fixed("Something else entirely"));
 
         let pipeline = Pipeline::new()
-            .generate(vec![
-                "model-a".into(),
-                "model-b".into(),
-                "model-c".into(),
-            ])
+            .generate(vec!["model-a".into(), "model-b".into(), "model-c".into()])
             .vote(VoteMethod::Majority);
 
         let result = pipeline.run("What is the answer?", &provider, None).await.unwrap();

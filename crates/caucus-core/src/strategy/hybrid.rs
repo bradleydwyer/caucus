@@ -16,11 +16,7 @@ pub struct DebateThenVote {
 
 impl Default for DebateThenVote {
     fn default() -> Self {
-        Self {
-            debate_rounds: 2,
-            vote_threshold: 0.8,
-            convergence_threshold: 0.9,
-        }
+        Self { debate_rounds: 2, vote_threshold: 0.8, convergence_threshold: 0.9 }
     }
 }
 
@@ -51,9 +47,7 @@ impl ConsensusStrategy for DebateThenVote {
         candidates: &[Candidate],
         llm: Option<&dyn LlmProvider>,
     ) -> Result<ConsensusResult> {
-        let llm = llm.ok_or_else(|| {
-            anyhow::anyhow!("DebateThenVote requires an LLM provider")
-        })?;
+        let llm = llm.ok_or_else(|| anyhow::anyhow!("DebateThenVote requires an LLM provider"))?;
 
         if candidates.is_empty() {
             anyhow::bail!("No candidates provided");
@@ -71,8 +65,10 @@ impl ConsensusStrategy for DebateThenVote {
         // Create new candidates from the debate output
         // The debate produces refined positions; we treat the debate output
         // plus original candidates as the voting pool
-        let mut vote_candidates = vec![Candidate::new(&debate_result.content)
-            .with_metadata("source", serde_json::json!("debate_synthesis"))];
+        let mut vote_candidates = vec![
+            Candidate::new(&debate_result.content)
+                .with_metadata("source", serde_json::json!("debate_synthesis")),
+        ];
 
         // Include original candidates that are still distinct
         for candidate in candidates {
@@ -85,10 +81,9 @@ impl ConsensusStrategy for DebateThenVote {
 
         // Override strategy name and add combined metadata
         vote_result.strategy = self.name().to_string();
-        vote_result.metadata.insert(
-            "debate_rounds".to_string(),
-            serde_json::json!(self.debate_rounds),
-        );
+        vote_result
+            .metadata
+            .insert("debate_rounds".to_string(), serde_json::json!(self.debate_rounds));
         vote_result.metadata.insert(
             "debate_agreement".to_string(),
             serde_json::json!(debate_result.agreement_score),
@@ -120,10 +115,7 @@ mod tests {
         ];
 
         let strategy = DebateThenVote::new().with_debate_rounds(1);
-        let result = strategy
-            .resolve(&candidates, Some(&provider))
-            .await
-            .unwrap();
+        let result = strategy.resolve(&candidates, Some(&provider)).await.unwrap();
 
         assert_eq!(result.strategy, "debate_then_vote");
         assert!(!result.content.is_empty());

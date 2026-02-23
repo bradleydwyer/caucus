@@ -1,4 +1,4 @@
-use caucus_core::{consensus, Candidate, OutputFormat};
+use caucus_core::{Candidate, OutputFormat, consensus};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

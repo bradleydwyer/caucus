@@ -4,8 +4,16 @@ use caucus_core::{MockProvider, MultiProvider, OutputFormat, Pipeline, VoteMetho
 async fn main() -> anyhow::Result<()> {
     // Set up mock providers (replace with real providers in production)
     let provider = MultiProvider::new()
-        .add("model-a", MockProvider::fixed("Inflation is caused by too much money chasing too few goods."))
-        .add("model-b", MockProvider::fixed("Inflation results from excessive money supply growth relative to economic output."))
+        .add(
+            "model-a",
+            MockProvider::fixed("Inflation is caused by too much money chasing too few goods."),
+        )
+        .add(
+            "model-b",
+            MockProvider::fixed(
+                "Inflation results from excessive money supply growth relative to economic output.",
+            ),
+        )
         .add("model-c", MockProvider::fixed("Solar flares cause inflation."));
 
     // Build a pipeline: generate from 3 models, then vote

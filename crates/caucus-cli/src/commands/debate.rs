@@ -1,7 +1,7 @@
+use caucus_core::strategy::debate::DebateConfig;
+use caucus_core::{Candidate, ConsensusStrategy, MultiRoundDebate, OutputFormat};
 use clap::Args;
 use colored::Colorize;
-use caucus_core::{Candidate, MultiRoundDebate, ConsensusStrategy, OutputFormat};
-use caucus_core::strategy::debate::DebateConfig;
 
 use super::{build_provider, build_single_provider, default_models};
 
@@ -40,18 +40,12 @@ pub async fn run(args: DebateArgs) -> anyhow::Result<()> {
     let mut candidates = Vec::new();
 
     for model in &models {
-        let llm = provider
-            .get(model)
-            .ok_or_else(|| anyhow::anyhow!("No provider for model: {model}"))?;
+        let llm =
+            provider.get(model).ok_or_else(|| anyhow::anyhow!("No provider for model: {model}"))?;
 
         eprintln!("  {} Getting initial position from {}...", "·".dimmed(), model.yellow());
         let response = llm.complete(&args.prompt, None).await?;
-        eprintln!(
-            "  {} {} responded ({} chars)",
-            "✓".green(),
-            model,
-            response.len(),
-        );
+        eprintln!("  {} {} responded ({} chars)", "✓".green(), model, response.len(),);
         candidates.push(
             Candidate::new(response)
                 .with_model(model.clone())
