@@ -15,7 +15,7 @@ pub struct DebateArgs {
     pub models: Option<Vec<String>>,
 
     /// Number of debate rounds
-    #[arg(short, long, default_value = "3")]
+    #[arg(short, long, default_value = "3", value_parser = super::parse_rounds)]
     pub rounds: usize,
 
     /// Output format
@@ -56,7 +56,7 @@ pub async fn run(args: DebateArgs) -> anyhow::Result<()> {
     eprintln!();
 
     // Run debate
-    let judge_model = models.first().unwrap();
+    let judge_model = models.first().expect("no models configured");
     let judge_llm = build_single_provider(judge_model)?;
 
     let strategy = MultiRoundDebate::with_config(DebateConfig {

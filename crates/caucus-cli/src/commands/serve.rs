@@ -44,6 +44,7 @@ pub async fn run(args: ServeArgs) -> anyhow::Result<()> {
         .route("/v1/consensus", post(consensus_endpoint))
         .route("/v1/pipeline", post(pipeline_endpoint))
         .with_state(state)
+        // Permissive CORS is intentional — this is a local dev tool, not a production API
         .layer(tower_http::cors::CorsLayer::permissive());
 
     let addr = format!("{}:{}", args.host, args.port);
@@ -345,7 +346,7 @@ async fn run_mcp() -> anyhow::Result<()> {
                                     "result": {
                                         "content": [{
                                             "type": "text",
-                                            "text": serde_json::to_string_pretty(&result).unwrap()
+                                            "text": serde_json::to_string_pretty(&result).unwrap_or_else(|e| format!("{{\"error\": \"{e}\"}}"))
                                         }]
                                     }
                                 })

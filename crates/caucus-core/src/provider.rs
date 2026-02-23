@@ -169,10 +169,8 @@ impl HttpProvider {
 
         let resp = self
             .client
-            .post(format!(
-                "{}/v1beta/models/{}:generateContent?key={}",
-                self.base_url, self.model, self.api_key
-            ))
+            .post(format!("{}/v1beta/models/{}:generateContent", self.base_url, self.model))
+            .header("x-goog-api-key", &self.api_key)
             .json(&body)
             .send()
             .await?

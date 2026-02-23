@@ -62,7 +62,7 @@ pub async fn run(args: BenchArgs) -> anyhow::Result<()> {
 
     let provider = build_provider(&models)?;
     let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = {
-        let judge_model = models.first().unwrap();
+        let judge_model = models.first().expect("no models configured");
         build_single_provider(judge_model).ok()
     };
 

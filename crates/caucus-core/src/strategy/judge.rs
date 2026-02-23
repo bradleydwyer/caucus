@@ -143,6 +143,7 @@ pub(crate) fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
         if parsed.dissent_indices.is_empty() {
             parsed.agreement_score = 1.0;
         }
+        parsed.agreement_score = parsed.agreement_score.clamp(0.0, 1.0);
         return Ok(parsed);
     }
     // Try to extract JSON from markdown code block
@@ -154,6 +155,7 @@ pub(crate) fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
             if parsed.dissent_indices.is_empty() {
                 parsed.agreement_score = 1.0;
             }
+            parsed.agreement_score = parsed.agreement_score.clamp(0.0, 1.0);
             return Ok(parsed);
         }
     }

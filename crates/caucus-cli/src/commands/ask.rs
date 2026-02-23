@@ -46,7 +46,7 @@ pub struct AskArgs {
     pub format: String,
 
     /// Number of debate rounds (for debate strategies)
-    #[arg(long, default_value = "3")]
+    #[arg(long, default_value = "3", value_parser = super::parse_rounds)]
     pub rounds: usize,
 }
 
@@ -137,7 +137,7 @@ pub async fn run(args: AskArgs) -> anyhow::Result<()> {
     let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = if strategy_needs_llm(&args.strategy)
     {
         // Use the first model as the judge
-        let judge_model = models.first().unwrap();
+        let judge_model = models.first().expect("no models configured");
         Some(build_single_provider(judge_model)?)
     } else {
         None

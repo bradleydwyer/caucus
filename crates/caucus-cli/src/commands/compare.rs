@@ -64,7 +64,7 @@ pub async fn run(args: CompareArgs) -> anyhow::Result<()> {
 
     // Build a judge LLM for strategies that need it
     let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = {
-        let judge_model = models.first().unwrap();
+        let judge_model = models.first().expect("no models configured");
         build_single_provider(judge_model).ok()
     };
 

@@ -6,6 +6,14 @@ pub mod serve;
 
 use caucus_core::{HttpProvider, LlmProvider, MultiProvider};
 
+fn parse_rounds(s: &str) -> Result<usize, String> {
+    let n: usize = s.parse().map_err(|e| format!("{e}"))?;
+    if !(1..=50).contains(&n) {
+        return Err("rounds must be between 1 and 50".into());
+    }
+    Ok(n)
+}
+
 /// Default frontier model for each provider.
 const DEFAULT_OPENAI_MODEL: &str = "gpt-5.2";
 const DEFAULT_ANTHROPIC_MODEL: &str = "claude-opus-4-6";
