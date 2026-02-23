@@ -24,6 +24,8 @@ jobs:
     strategy:
       matrix:
         include:
+          - os: macos-26
+            bottle_tag: arm64_tahoe
           - os: macos-15
             bottle_tag: arm64_sequoia
           - os: macos-14
@@ -132,6 +134,7 @@ jobs:
       - name: Read bottle SHA256s
         id: bottles
         run: |
+          echo "arm64_tahoe=$(cat bottle-shas/arm64_tahoe)" >> "$GITHUB_OUTPUT"
           echo "arm64_sequoia=$(cat bottle-shas/arm64_sequoia)" >> "$GITHUB_OUTPUT"
           echo "arm64_sonoma=$(cat bottle-shas/arm64_sonoma)" >> "$GITHUB_OUTPUT"
 
@@ -145,6 +148,7 @@ jobs:
       - name: Update formula
         env:
           SOURCE_SHA: ${{ steps.source.outputs.sha256 }}
+          ARM64_TAHOE_SHA: ${{ steps.bottles.outputs.arm64_tahoe }}
           ARM64_SEQUOIA_SHA: ${{ steps.bottles.outputs.arm64_sequoia }}
           ARM64_SONOMA_SHA: ${{ steps.bottles.outputs.arm64_sonoma }}
         run: |
@@ -158,6 +162,7 @@ jobs:
 
             bottle do
               root_url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}"
+              sha256 cellar: :any_skip_relocation, arm64_tahoe:   "${ARM64_TAHOE_SHA}"
               sha256 cellar: :any_skip_relocation, arm64_sequoia: "${ARM64_SEQUOIA_SHA}"
               sha256 cellar: :any_skip_relocation, arm64_sonoma:  "${ARM64_SONOMA_SHA}"
             end
