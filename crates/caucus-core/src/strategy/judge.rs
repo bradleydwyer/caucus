@@ -129,15 +129,15 @@ impl ConsensusStrategy for JudgeSynthesis {
 }
 
 #[derive(serde::Deserialize)]
-struct JudgeResponse {
-    synthesis: String,
-    reasoning: String,
-    agreement_score: f64,
+pub(crate) struct JudgeResponse {
+    pub(crate) synthesis: String,
+    pub(crate) reasoning: String,
+    pub(crate) agreement_score: f64,
     #[serde(default)]
-    dissent_indices: Vec<usize>,
+    pub(crate) dissent_indices: Vec<usize>,
 }
 
-fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
+pub(crate) fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
     // Try direct parse first
     if let Ok(parsed) = serde_json::from_str::<JudgeResponse>(response) {
         return Ok(parsed);

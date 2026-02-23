@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
 
+use crate::strategy::judge::parse_judge_response;
 use crate::types::{Candidate, ConsensusResult, ConsensusStrategy, LlmProvider};
 
 /// Multi-round debate where candidates see each other's responses and refine their positions.
@@ -48,6 +49,27 @@ This is round {round} of {max_rounds}. \
 Review the other positions and refine your answer. \
 If you've changed your mind on any points, explain why. \
 If you maintain your position, strengthen your argument.";
+
+const DEBATE_JUDGE_PROMPT: &str = "\
+Below is a synthesis produced by a multi-round debate, followed by the {count} original \
+candidate responses that entered the debate.
+
+--- Debate Synthesis ---
+{synthesis}
+
+{candidates}
+
+Compare the synthesis to each original candidate. Determine how much the candidates \
+agree with the final synthesis overall, and identify any candidates whose position \
+significantly differs from the consensus.
+
+Respond in the following JSON format:
+{{
+  \"synthesis\": \"(copy the debate synthesis above verbatim)\",
+  \"reasoning\": \"Brief explanation of agreement and disagreements\",
+  \"agreement_score\": 0.0 to 1.0 representing overall agreement,
+  \"dissent_indices\": [zero-based indices of candidates that significantly disagreed]
+}}";
 
 impl MultiRoundDebate {
     pub fn new() -> Self {
@@ -178,19 +200,43 @@ impl ConsensusStrategy for MultiRoundDebate {
         // The final position is the consensus
         let final_position = current_positions.into_iter().next().unwrap_or_default();
 
-        // Calculate agreement between final position and original candidates
-        let agreement_scores: Vec<f64> =
-            candidates.iter().map(|c| text_similarity(&final_position, &c.content)).collect();
-        let avg_agreement =
-            agreement_scores.iter().sum::<f64>() / agreement_scores.len().max(1) as f64;
-
-        // Candidates whose original position was far from consensus are dissents
-        let dissents: Vec<Candidate> = candidates
+        // Use an LLM judge to classify agreement/dissent, falling back to
+        // text_similarity if the judge response can't be parsed.
+        let candidates_text = candidates
             .iter()
-            .zip(agreement_scores.iter())
-            .filter(|&(_, &score)| score < 0.3)
-            .map(|(c, _)| c.clone())
-            .collect();
+            .enumerate()
+            .map(|(i, c)| {
+                let model_info =
+                    c.model.as_ref().map(|m| format!(" (model: {m})")).unwrap_or_default();
+                format!("--- Candidate {}{}---\n{}", i, model_info, c.content)
+            })
+            .collect::<Vec<_>>()
+            .join("\n\n");
+
+        let judge_prompt = DEBATE_JUDGE_PROMPT
+            .replace("{count}", &candidates.len().to_string())
+            .replace("{synthesis}", &final_position)
+            .replace("{candidates}", &candidates_text);
+
+        let judge_response = llm.complete(&judge_prompt, Some(&self.config.system_prompt)).await?;
+
+        let (avg_agreement, dissents) = if let Ok(parsed) = parse_judge_response(&judge_response) {
+            let dissents: Vec<Candidate> =
+                parsed.dissent_indices.iter().filter_map(|&i| candidates.get(i).cloned()).collect();
+            (parsed.agreement_score, dissents)
+        } else {
+            // Fallback: text_similarity scoring
+            let agreement_scores: Vec<f64> =
+                candidates.iter().map(|c| text_similarity(&final_position, &c.content)).collect();
+            let avg = agreement_scores.iter().sum::<f64>() / agreement_scores.len().max(1) as f64;
+            let dissents: Vec<Candidate> = candidates
+                .iter()
+                .zip(agreement_scores.iter())
+                .filter(|&(_, &score)| score < 0.3)
+                .map(|(c, _)| c.clone())
+                .collect();
+            (avg, dissents)
+        };
 
         let mut metadata = HashMap::new();
         metadata.insert("rounds_completed".to_string(), serde_json::json!(actual_rounds));
@@ -218,7 +264,17 @@ mod tests {
 
     #[tokio::test]
     async fn debate_converges() {
-        let provider = MockProvider::fixed("The refined consensus answer after debate.");
+        let judge_json = serde_json::json!({
+            "synthesis": "The refined consensus answer after debate.",
+            "reasoning": "Both candidates broadly agreed.",
+            "agreement_score": 0.85,
+            "dissent_indices": []
+        });
+
+        let provider = MockProvider::new(vec![
+            "The refined consensus answer after debate.".to_string(),
+            judge_json.to_string(),
+        ]);
         let candidates = vec![
             Candidate::new("Answer A from model 1").with_model("model-1"),
             Candidate::new("Answer B from model 2").with_model("model-2"),
@@ -229,6 +285,8 @@ mod tests {
 
         assert_eq!(result.strategy, "multi_round_debate");
         assert!(!result.content.is_empty());
+        assert_eq!(result.agreement_score, 0.85);
+        assert!(result.dissents.is_empty());
     }
 
     #[tokio::test]
