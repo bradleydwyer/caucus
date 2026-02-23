@@ -46,7 +46,7 @@ async fn test_judge_synthesis_with_mock() {
 
     let result = consensus(&candidates, "judge", Some(&provider)).await.unwrap();
     assert!(result.content.contains("Paris"));
-    assert_eq!(result.agreement_score, 0.85);
+    assert_eq!(result.agreement_score, 1.0);
 }
 
 #[tokio::test]

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::strategy::judge::parse_judge_response;
+use crate::strategy::judge::{parse_judge_response, DEFAULT_JUDGE_SYSTEM};
 use crate::types::{Candidate, ConsensusResult, ConsensusStrategy, LlmProvider};
 
 /// Multi-round debate where candidates see each other's responses and refine their positions.
@@ -187,11 +187,18 @@ impl ConsensusStrategy for MultiRoundDebate {
             current_positions = new_positions;
             round_history.push(current_positions.clone());
 
+            tracing::info!(
+                "Debate round {}/{} complete (convergence similarity: {:.3})",
+                round,
+                self.config.max_rounds,
+                max_similarity
+            );
+
             if max_similarity >= self.config.convergence_threshold {
                 tracing::info!(
-                    "Debate converged at round {} (similarity: {:.2})",
+                    "Debate converged early at round {} (threshold: {:.2})",
                     round,
-                    max_similarity
+                    self.config.convergence_threshold
                 );
                 break;
             }
@@ -202,6 +209,7 @@ impl ConsensusStrategy for MultiRoundDebate {
 
         // Use an LLM judge to classify agreement/dissent, falling back to
         // text_similarity if the judge response can't be parsed.
+        tracing::info!("Sending debate synthesis to judge for classification");
         let candidates_text = candidates
             .iter()
             .enumerate()
@@ -218,7 +226,7 @@ impl ConsensusStrategy for MultiRoundDebate {
             .replace("{synthesis}", &final_position)
             .replace("{candidates}", &candidates_text);
 
-        let judge_response = llm.complete(&judge_prompt, Some(&self.config.system_prompt)).await?;
+        let judge_response = llm.complete(&judge_prompt, Some(DEFAULT_JUDGE_SYSTEM)).await?;
 
         let (avg_agreement, dissents) = if let Ok(parsed) = parse_judge_response(&judge_response) {
             let dissents: Vec<Candidate> =
@@ -235,6 +243,7 @@ impl ConsensusStrategy for MultiRoundDebate {
                 .filter(|&(_, &score)| score < 0.3)
                 .map(|(c, _)| c.clone())
                 .collect();
+            let avg = if dissents.is_empty() { 1.0 } else { avg };
             (avg, dissents)
         };
 
@@ -285,7 +294,7 @@ mod tests {
 
         assert_eq!(result.strategy, "multi_round_debate");
         assert!(!result.content.is_empty());
-        assert_eq!(result.agreement_score, 0.85);
+        assert_eq!(result.agreement_score, 1.0);
         assert!(result.dissents.is_empty());
     }
 

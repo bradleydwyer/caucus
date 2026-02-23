@@ -20,7 +20,7 @@ impl Default for JudgeSynthesis {
     }
 }
 
-const DEFAULT_JUDGE_SYSTEM: &str = "\
+pub(crate) const DEFAULT_JUDGE_SYSTEM: &str = "\
 You are an expert judge evaluating multiple AI responses to the same question. \
 Your job is to synthesize the best possible answer by analyzing all responses, \
 identifying the strongest reasoning and most accurate information from each, \
@@ -118,7 +118,7 @@ impl ConsensusStrategy for JudgeSynthesis {
             Ok(ConsensusResult {
                 content: response,
                 strategy: self.name().to_string(),
-                agreement_score: 0.5,
+                agreement_score: 1.0,
                 candidates: candidates.to_vec(),
                 dissents: vec![],
                 reasoning: Some("Judge response was not in structured format".to_string()),
@@ -139,7 +139,10 @@ pub(crate) struct JudgeResponse {
 
 pub(crate) fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
     // Try direct parse first
-    if let Ok(parsed) = serde_json::from_str::<JudgeResponse>(response) {
+    if let Ok(mut parsed) = serde_json::from_str::<JudgeResponse>(response) {
+        if parsed.dissent_indices.is_empty() {
+            parsed.agreement_score = 1.0;
+        }
         return Ok(parsed);
     }
     // Try to extract JSON from markdown code block
@@ -147,7 +150,10 @@ pub(crate) fn parse_judge_response(response: &str) -> Result<JudgeResponse> {
         && let Some(end) = response.rfind('}')
     {
         let json_str = &response[start..=end];
-        if let Ok(parsed) = serde_json::from_str::<JudgeResponse>(json_str) {
+        if let Ok(mut parsed) = serde_json::from_str::<JudgeResponse>(json_str) {
+            if parsed.dissent_indices.is_empty() {
+                parsed.agreement_score = 1.0;
+            }
             return Ok(parsed);
         }
     }
