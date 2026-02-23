@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::strategy::judge::{parse_judge_response, DEFAULT_JUDGE_SYSTEM};
+use crate::strategy::judge::{DEFAULT_JUDGE_SYSTEM, parse_judge_response};
 use crate::types::{Candidate, ConsensusResult, ConsensusStrategy, LlmProvider};
 
 /// Multi-round debate where candidates see each other's responses and refine their positions.

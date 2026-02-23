@@ -40,10 +40,7 @@ pub fn render(result: &ConsensusResult) -> String {
     if result.metadata.contains_key("round_history") {
         if let Some(rounds_completed) = result.metadata.get("rounds_completed") {
             output.push_str("=== DEBATE TRANSCRIPT ===\n");
-            output.push_str(&format!(
-                "Rounds completed: {}\n\n",
-                rounds_completed
-            ));
+            output.push_str(&format!("Rounds completed: {}\n\n", rounds_completed));
         }
 
         if let Some(serde_json::Value::Array(rounds)) = result.metadata.get("round_history") {
@@ -67,16 +64,12 @@ pub fn render(result: &ConsensusResult) -> String {
     }
 
     // Show remaining metadata, excluding round_history (already rendered above)
-    let filtered_metadata: std::collections::HashMap<_, _> = result
-        .metadata
-        .iter()
-        .filter(|(k, _)| k.as_str() != "round_history")
-        .collect();
+    let filtered_metadata: std::collections::HashMap<_, _> =
+        result.metadata.iter().filter(|(k, _)| k.as_str() != "round_history").collect();
     if !filtered_metadata.is_empty() {
         output.push_str("=== METADATA ===\n");
         output.push_str(
-            &serde_json::to_string_pretty(&filtered_metadata)
-                .unwrap_or_else(|_| "{}".to_string()),
+            &serde_json::to_string_pretty(&filtered_metadata).unwrap_or_else(|_| "{}".to_string()),
         );
         output.push('\n');
     }
