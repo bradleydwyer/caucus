@@ -15,8 +15,7 @@ Rust core with a CLI, HTTP API, MCP server, and Python bindings.
 ### Homebrew (macOS)
 
 ```bash
-brew tap bradleydwyer/caucus
-brew install caucus
+brew install bradleydwyer/tap/caucus
 ```
 
 ### From source
