@@ -148,9 +148,9 @@ jobs:
       - name: Check out tap repository
         uses: actions/checkout@v4
         with:
-          repository: bradleydwyer/homebrew-caucus
+          repository: bradleydwyer/homebrew-tap
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
-          path: homebrew-caucus
+          path: homebrew-tap
 
       - name: Update formula
         env:
@@ -159,7 +159,7 @@ jobs:
           ARM64_SEQUOIA_SHA: ${{ steps.bottles.outputs.arm64_sequoia }}
           ARM64_SONOMA_SHA: ${{ steps.bottles.outputs.arm64_sonoma }}
         run: |
-          cat > homebrew-caucus/Formula/caucus.rb <<EOF
+          cat > homebrew-tap/Formula/caucus.rb <<EOF
           class Caucus < Formula
             desc "Multi-LLM consensus engine — aggregate and synthesize LLM outputs"
             homepage "https://github.com/bradleydwyer/caucus"
@@ -188,7 +188,7 @@ jobs:
 
       - name: Commit and push formula update
         run: |
-          cd homebrew-caucus
+          cd homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/caucus.rb
