@@ -134,6 +134,16 @@ print(result.content)          # "The answer is 42"
 print(result.agreement_score)  # 0.67
 ```
 
+## Claude Code Skill
+
+caucus includes a [skill](skill/SKILL.md) for Claude Code. Install it with [equip](https://github.com/bradleydwyer/equip):
+
+```bash
+equip install bradleydwyer/caucus
+```
+
+This lets Claude Code use caucus directly when you ask it to query multiple models or get a consensus answer.
+
 ## Configuration
 
 API keys are read from environment variables or a `.env` file:
