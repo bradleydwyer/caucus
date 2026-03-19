@@ -31,8 +31,6 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             os: macos-latest
-          - target: x86_64-apple-darwin
-            os: macos-13
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
@@ -115,7 +113,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${TAG#v}"
-          for target in aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+          for target in aarch64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
             URL="https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-${target}"
             curl -fsSL -o "caucus-${target}" "$URL"
             SHA=$(sha256sum "caucus-${target}" | awk '{print $1}')
@@ -141,13 +139,8 @@ jobs:
             license "MIT"
 
             on_macos do
-              if Hardware::CPU.arm?
-                url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-aarch64-apple-darwin"
-                sha256 "${{ steps.shas.outputs.aarch64_apple_darwin }}"
-              else
-                url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-x86_64-apple-darwin"
-                sha256 "${{ steps.shas.outputs.x86_64_apple_darwin }}"
-              end
+              url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-aarch64-apple-darwin"
+              sha256 "${{ steps.shas.outputs.aarch64_apple_darwin }}"
             end
 
             on_linux do
