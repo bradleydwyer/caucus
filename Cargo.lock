@@ -162,7 +162,7 @@ checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "caucus-cli"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "anyhow",
  "axum",
@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "caucus-core"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -193,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "caucus-python"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "caucus-core",
  "pyo3",
