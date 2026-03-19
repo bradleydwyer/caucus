@@ -2,148 +2,121 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
-  create-release:
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace -- -D warnings
+      - run: cargo test --workspace
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --generate-notes
-
-  build-bottle:
-    needs: create-release
+  build:
+    name: Build ${{ matrix.target }}
+    needs: ci
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - os: macos-26
-            bottle_tag: arm64_tahoe
-          - os: macos-15
-            bottle_tag: arm64_sequoia
-          - os: macos-14
-            bottle_tag: arm64_sonoma
-    runs-on: ${{ matrix.os }}
-    env:
-      TAG: ${{ github.ref_name }}
-      REPO: ${{ github.repository }}
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up variables
-        id: vars
-        run: |
-          VERSION="${TAG#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Download source tarball and compute SHA256
-        id: source
-        run: |
-          curl -fsSL -o source.tar.gz \
-            "https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
-          SHA=$(shasum -a 256 source.tar.gz | awk '{print $1}')
-          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Create local tap with formula
-        env:
-          SOURCE_SHA: ${{ steps.source.outputs.sha256 }}
-        run: |
-          TAPDIR="$(brew --repository)/Library/Taps/local/homebrew-caucus/Formula"
-          mkdir -p "$TAPDIR"
-          cat > "$TAPDIR/caucus.rb" <<FORMULA
-          class Caucus < Formula
-            desc "Multi-LLM consensus engine"
-            homepage "https://github.com/${REPO}"
-            url "https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
-            sha256 "${SOURCE_SHA}"
-            license "MIT"
-
-            depends_on "rust" => :build
-
-            def install
-              system "cargo", "install", "--locked", "--root", prefix, "--path", "crates/caucus-cli"
-            end
-
-            test do
-              assert_match "caucus", shell_output("#{bin}/caucus --version")
-            end
-          end
-          FORMULA
-
-      - name: Build bottle
-        run: brew install --build-bottle local/caucus/caucus
-
-      - name: Package bottle
-        run: |
-          cd "$RUNNER_TEMP"
-          brew bottle \
-            --no-rebuild \
-            --root-url="https://github.com/${REPO}/releases/download/${TAG}" \
-            local/caucus/caucus
-
-      - name: Rename bottle to single-dash filename
-        run: |
-          cd "$RUNNER_TEMP"
-          for f in caucus--*.tar.gz; do
-            mv "$f" "${f/caucus--/caucus-}"
-          done
-
-      - name: Upload bottle to release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          BOTTLE=$(ls "${RUNNER_TEMP}"/caucus-*.tar.gz)
-          gh release upload "$TAG" "$BOTTLE" --clobber
-
-      - name: Save bottle SHA256
-        run: |
-          BOTTLE=$(ls "${RUNNER_TEMP}"/caucus-*.tar.gz)
-          SHA=$(shasum -a 256 "$BOTTLE" | awk '{print $1}')
-          mkdir -p bottle-sha
-          echo "$SHA" > "bottle-sha/${{ matrix.bottle_tag }}"
-
-      - name: Upload SHA256 artifact
-        uses: actions/upload-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          name: bottle-sha-${{ matrix.bottle_tag }}
-          path: bottle-sha/
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build
+        run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }} -p caucus-cli
+          else
+            cargo build --release --target ${{ matrix.target }} -p caucus-cli
+          fi
+
+      - name: Package binary
+        run: |
+          cp target/${{ matrix.target }}/release/caucus caucus-${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: caucus-${{ matrix.target }}
+          path: caucus-${{ matrix.target }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir release
+          for dir in artifacts/caucus-*/; do
+            cp "$dir"/* release/
+          done
+          cd release
+          sha256sum caucus-* > checksums-sha256.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/caucus-*
+            release/checksums-sha256.txt
 
   update-tap:
-    needs: build-bottle
+    name: Update Homebrew Tap
+    needs: release
     runs-on: ubuntu-latest
     env:
       TAG: ${{ github.ref_name }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download source tarball and compute SHA256
-        id: source
+      - name: Compute SHA256s from release assets
+        id: shas
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fsSL -o source.tar.gz \
-            "https://github.com/bradleydwyer/caucus/archive/refs/tags/${TAG}.tar.gz"
-          SHA=$(sha256sum source.tar.gz | awk '{print $1}')
-          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Download all bottle SHA256 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: bottle-sha-*
-          merge-multiple: true
-          path: bottle-shas/
-
-      - name: Read bottle SHA256s
-        id: bottles
-        run: |
-          echo "arm64_tahoe=$(cat bottle-shas/arm64_tahoe)" >> "$GITHUB_OUTPUT"
-          echo "arm64_sequoia=$(cat bottle-shas/arm64_sequoia)" >> "$GITHUB_OUTPUT"
-          echo "arm64_sonoma=$(cat bottle-shas/arm64_sonoma)" >> "$GITHUB_OUTPUT"
+          VERSION="${TAG#v}"
+          for target in aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+            URL="https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-${target}"
+            curl -fsSL -o "caucus-${target}" "$URL"
+            SHA=$(sha256sum "caucus-${target}" | awk '{print $1}')
+            KEY=$(echo "$target" | tr '-' '_')
+            echo "${KEY}=${SHA}" >> "$GITHUB_OUTPUT"
+          done
 
       - name: Check out tap repository
         uses: actions/checkout@v4
@@ -153,35 +126,41 @@ jobs:
           path: homebrew-tap
 
       - name: Update formula
-        env:
-          SOURCE_SHA: ${{ steps.source.outputs.sha256 }}
-          ARM64_TAHOE_SHA: ${{ steps.bottles.outputs.arm64_tahoe }}
-          ARM64_SEQUOIA_SHA: ${{ steps.bottles.outputs.arm64_sequoia }}
-          ARM64_SONOMA_SHA: ${{ steps.bottles.outputs.arm64_sonoma }}
         run: |
+          VERSION="${TAG#v}"
           cat > homebrew-tap/Formula/caucus.rb <<EOF
           class Caucus < Formula
             desc "Multi-LLM consensus engine — aggregate and synthesize LLM outputs"
             homepage "https://github.com/bradleydwyer/caucus"
-            url "https://github.com/bradleydwyer/caucus/archive/refs/tags/${TAG}.tar.gz"
-            sha256 "${SOURCE_SHA}"
+            version "${VERSION}"
             license "MIT"
 
-            bottle do
-              root_url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}"
-              sha256 cellar: :any_skip_relocation, arm64_tahoe:   "${ARM64_TAHOE_SHA}"
-              sha256 cellar: :any_skip_relocation, arm64_sequoia: "${ARM64_SEQUOIA_SHA}"
-              sha256 cellar: :any_skip_relocation, arm64_sonoma:  "${ARM64_SONOMA_SHA}"
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-aarch64-apple-darwin"
+                sha256 "${{ steps.shas.outputs.aarch64_apple_darwin }}"
+              else
+                url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-x86_64-apple-darwin"
+                sha256 "${{ steps.shas.outputs.x86_64_apple_darwin }}"
+              end
             end
 
-            depends_on "rust" => :build
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-aarch64-unknown-linux-gnu"
+                sha256 "${{ steps.shas.outputs.aarch64_unknown_linux_gnu }}"
+              else
+                url "https://github.com/bradleydwyer/caucus/releases/download/${TAG}/caucus-x86_64-unknown-linux-gnu"
+                sha256 "${{ steps.shas.outputs.x86_64_unknown_linux_gnu }}"
+              end
+            end
 
             def install
-              system "cargo", "install", "--locked", "--root", prefix, "--path", "crates/caucus-cli"
+              bin.install Dir["caucus*"].first => "caucus"
             end
 
             test do
-              assert_match "caucus", shell_output("#{bin}/caucus --version")
+              assert_match "caucus", shell_output("\#{bin}/caucus --version")
             end
           end
           EOF
