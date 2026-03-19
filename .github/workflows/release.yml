@@ -13,7 +13,7 @@ jobs:
     name: CI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
@@ -41,7 +41,7 @@ jobs:
             ext: .exe
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -69,7 +69,7 @@ jobs:
         run: |
           cp target/${{ matrix.target }}/release/caucus${{ matrix.ext }} caucus-${{ matrix.target }}${{ matrix.ext }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: caucus-${{ matrix.target }}
           path: caucus-${{ matrix.target }}*
@@ -79,7 +79,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
 
@@ -122,7 +122,7 @@ jobs:
           done
 
       - name: Check out tap repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: bradleydwyer/homebrew-tap
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
