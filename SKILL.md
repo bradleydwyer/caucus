@@ -54,6 +54,7 @@ Always use `-f json` for parseable output.
 caucus "prompt" -f json                                          # all models, judge strategy
 caucus "prompt" -m gpt-5.2,claude-opus-4-6 -f json              # specific models
 caucus "prompt" -s debate -f json                                # debate strategy
+caucus debate "prompt" --rounds 3 --live --format plain          # stream the debate live
 caucus "prompt" --profile deep -f json                           # council profile (exact members)
 caucus "prompt" --auto -f json                                   # zero-key council, no API keys
 caucus compare "prompt" --strategies majority-vote,judge -f json # compare strategies

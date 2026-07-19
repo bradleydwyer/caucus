@@ -4,7 +4,7 @@ pub mod judge;
 pub mod semantic;
 pub mod vote;
 
-pub use debate::MultiRoundDebate;
+pub use debate::{DebateEvent, MultiRoundDebate};
 pub use hybrid::DebateThenVote;
 pub use judge::JudgeSynthesis;
 pub use semantic::SemanticClustering;

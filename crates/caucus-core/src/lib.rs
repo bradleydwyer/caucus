@@ -59,6 +59,6 @@ pub use types::{
 
 pub use format::OutputFormat;
 pub use strategy::{
-    DebateThenVote, JudgeSynthesis, MajorityVote, MultiRoundDebate, SemanticClustering,
-    WeightedVote,
+    DebateEvent, DebateThenVote, JudgeSynthesis, MajorityVote, MultiRoundDebate,
+    SemanticClustering, WeightedVote,
 };
