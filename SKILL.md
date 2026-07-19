@@ -86,7 +86,7 @@ classifications. `--max-requests` is a hard cap; `--budget-usd` is advisory.
 ### 2b. Inspect Councils
 
 ```bash
-caucus doctor          # Markdown readiness tables (--json available)
+caucus doctor          # rendered terminal readiness tables (--json available)
 caucus profiles        # list profiles and exact members (or a name / --json)
 ```
 
