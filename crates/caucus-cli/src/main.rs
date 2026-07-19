@@ -7,7 +7,8 @@ use clap::{Parser, Subcommand};
 /// Check if we need to inject "ask" as the default subcommand.
 /// Returns true when the first positional arg is not a known subcommand.
 fn needs_subcommand_injection(args: &[String]) -> bool {
-    let subcommands = ["ask", "compare", "debate", "bench", "serve", "help"];
+    let subcommands =
+        ["ask", "compare", "debate", "bench", "serve", "doctor", "profiles", "review", "help"];
 
     // Find the first positional argument by skipping global flags
     let mut i = 1;
@@ -58,6 +59,12 @@ enum Commands {
     Bench(commands::bench::BenchArgs),
     /// Start an HTTP API or MCP server
     Serve(commands::serve::ServeArgs),
+    /// Check adapter readiness, config validity, and profile health
+    Doctor(commands::doctor::DoctorArgs),
+    /// List or show council profiles (built-ins and user-defined)
+    Profiles(commands::profiles::ProfilesArgs),
+    /// Adjudicated multi-model code/text review
+    Review(commands::review::ReviewArgs),
 }
 
 #[tokio::main]
@@ -89,5 +96,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::Debate(args) => commands::debate::run(args).await,
         Commands::Bench(args) => commands::bench::run(args).await,
         Commands::Serve(args) => commands::serve::run(args).await,
+        Commands::Doctor(args) => commands::doctor::run(args).await,
+        Commands::Profiles(args) => commands::profiles::run(args).await,
+        Commands::Review(args) => commands::review::run(args).await,
     }
 }

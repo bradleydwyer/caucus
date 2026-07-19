@@ -1,0 +1,48 @@
+# caucus configuration example.
+#
+# Conventional location: ~/.config/caucus/config.toml
+# (or $XDG_CONFIG_HOME/caucus/config.toml).
+#
+# Member specs use the form `utility:model@effort`:
+#   utility  — adapter id: claude, codex, kimi, opencode, ollama, lmstudio,
+#              gemini, grok, acp
+#   model    — exact model id, passed through verbatim (no aliasing)
+#   effort   — optional; claude [low, medium, high, xhigh, max],
+#              codex [minimal, low, medium, high, xhigh],
+#              kimi [low, high, max], opencode [all six],
+#              grok [low, medium, high]; ollama, lmstudio, gemini, acp take none
+
+# Default profile. The built-in `deep` profile has exactly these members:
+#   claude:opus@xhigh, claude:claude-fable-5@xhigh, codex:default@xhigh,
+#   opencode:zai-coding-plan/glm-5.2@xhigh, kimi:kimi-code/k3@high
+# User profiles defined below shadow built-ins.
+default_profile = "deep"
+
+# Per-adapter overrides. Typed keys: binary_path, timeout_secs,
+# max_stdout_bytes, max_stderr_bytes, model, env. Unknown keys are rejected
+# so misspelled execution and safety settings cannot be silently ignored.
+[adapters.claude]
+timeout_secs = 900
+max_stdout_bytes = 2097152
+
+[adapters.codex]
+timeout_secs = 900
+
+[adapters.kimi]
+# binary_path = "/usr/local/bin/kimi"   # override PATH resolution
+env = { NO_COLOR = "1" }
+
+[adapters.opencode]
+# opencode/GLM compatibility is experimental.
+timeout_secs = 600
+
+# User-defined profiles.
+[profiles.local]
+members = ["ollama:llama3.2:latest", "lmstudio:qwen3-32b"]
+
+[profiles.frontier]
+members = [
+  "claude:opus@xhigh",
+  "codex:default@xhigh",
+  "kimi:kimi-code/k3@high",
+]
