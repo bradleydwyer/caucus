@@ -1,5 +1,9 @@
+use std::io::Write;
+
 use caucus_core::strategy::debate::DebateConfig;
-use caucus_core::{Candidate, ConsensusStrategy, FanoutConfig, MultiRoundDebate, OutputFormat};
+use caucus_core::{
+    Candidate, ConsensusStrategy, DebateEvent, FanoutConfig, MultiRoundDebate, OutputFormat,
+};
 use clap::Args;
 use colored::Colorize;
 
@@ -17,6 +21,10 @@ pub struct DebateArgs {
     /// Number of debate rounds
     #[arg(short, long, default_value = "3", value_parser = super::parse_rounds)]
     pub rounds: usize,
+
+    /// Stream initial positions and each completed round response to stderr
+    #[arg(long)]
+    pub live: bool,
 
     /// Output format
     #[arg(short, long, default_value = "detailed",
@@ -82,8 +90,18 @@ pub async fn run(args: DebateArgs) -> anyhow::Result<()> {
         max_rounds: args.rounds,
         ..Default::default()
     });
-
-    let result = strategy.resolve_multi(&candidates, Some(judge_llm), Some(&provider)).await?;
+    let result = if args.live {
+        strategy
+            .resolve_multi_observed(
+                &candidates,
+                Some(judge_llm),
+                Some(&provider),
+                &print_live_event,
+            )
+            .await?
+    } else {
+        strategy.resolve_multi(&candidates, Some(judge_llm), Some(&provider)).await?
+    };
 
     eprintln!(
         "\n{} Debate concluded (agreement: {:.0}%)\n",
@@ -94,4 +112,88 @@ pub async fn run(args: DebateArgs) -> anyhow::Result<()> {
     println!("{}", format.render(&result));
 
     Ok(())
+}
+
+fn participant_label(participant: usize, model: Option<&str>) -> String {
+    model.map(str::to_string).unwrap_or_else(|| format!("participant {}", participant + 1))
+}
+
+fn render_live_event(event: &DebateEvent) -> String {
+    match event {
+        DebateEvent::InitialPosition { participant, model, content } => format!(
+            "── Initial position · {} ──\n{}",
+            participant_label(*participant, model.as_deref()),
+            content
+        ),
+        DebateEvent::RoundStarted { round, max_rounds } => {
+            format!("▶ Round {round}/{max_rounds}")
+        }
+        DebateEvent::PositionRevised { round, participant, model, response, .. } => format!(
+            "── Round {round} · {} ──\n{}",
+            participant_label(*participant, model.as_deref()),
+            response
+        ),
+        DebateEvent::PositionRetained { round, participant, model, reason } => format!(
+            "✗ Round {round} · {} kept its previous position ({reason})",
+            participant_label(*participant, model.as_deref())
+        ),
+        DebateEvent::RoundCompleted { round, mean_similarity: Some(similarity) } => {
+            format!(
+                "✓ Round {round} complete (mean position similarity: {:.0}%)",
+                similarity * 100.0
+            )
+        }
+        DebateEvent::RoundCompleted { round, mean_similarity: None } => {
+            format!("✓ Round {round} complete (no successful revisions)")
+        }
+        DebateEvent::Converged { round, mean_similarity } => format!(
+            "✓ Debate converged after round {round} ({:.0}% similarity)",
+            mean_similarity * 100.0
+        ),
+        DebateEvent::AdjudicationStarted => "▶ Adjudicating final positions".to_string(),
+    }
+}
+
+fn print_live_event(event: &DebateEvent) {
+    let mut stderr = std::io::stderr().lock();
+    let _ = writeln!(stderr, "\n{}", render_live_event(event));
+    let _ = stderr.flush();
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::*;
+
+    #[derive(Parser)]
+    struct TestCli {
+        #[command(flatten)]
+        args: DebateArgs,
+    }
+
+    #[test]
+    fn live_flag_is_opt_in() {
+        let normal = TestCli::try_parse_from(["test", "topic"]).unwrap();
+        assert!(!normal.args.live);
+
+        let live = TestCli::try_parse_from(["test", "topic", "--live"]).unwrap();
+        assert!(live.args.live);
+        assert_eq!(live.args.format, "detailed");
+    }
+
+    #[test]
+    fn live_revision_includes_model_round_and_full_response() {
+        let rendered = render_live_event(&DebateEvent::PositionRevised {
+            round: 2,
+            participant: 0,
+            model: Some("claude-opus".to_string()),
+            response: "Critique first.\nFINAL ANSWER: Revised view.".to_string(),
+            position: "Revised view.".to_string(),
+        });
+
+        assert!(rendered.contains("Round 2 · claude-opus"));
+        assert!(rendered.contains("Critique first."));
+        assert!(rendered.contains("FINAL ANSWER: Revised view."));
+    }
 }

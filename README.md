@@ -82,6 +82,16 @@ With a single model, caucus skips consensus and returns the response directly.
 
 See also: [verbose output](examples/verbose.md), [debate with supreme-court format](examples/debate-supreme-court.md)
 
+To watch a debate as it happens, add `--live`. Initial positions are shown
+before the first round, then each model's full round response is written to
+stderr as soon as it is ready. The final result remains on stdout. Use
+`--format plain` to avoid replaying the transcript after the live output.
+
+```bash
+caucus debate "The gold price will increase over the next 12 months" \
+  --rounds 3 --live --format plain
+```
+
 ## CLI commands
 
 ```bash
@@ -91,7 +101,7 @@ caucus ask "prompt" --profile deep          # council profile (exact members)
 caucus ask "prompt" --auto                  # ready subscription CLIs + local models
 caucus review --git-diff                    # adjudicated multi-model code review
 caucus compare "prompt" --strategies majority-vote,judge
-caucus debate "prompt" --rounds 3
+caucus debate "prompt" --rounds 3 --live
 caucus bench tests.jsonl -o results.json
 caucus profiles                             # list built-in and user profiles
 caucus doctor                               # adapter readiness + config health

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::join_all;
+use futures::stream::{FuturesUnordered, StreamExt};
 
 use crate::provider::MultiProvider;
 use crate::strategy::judge::{DEFAULT_JUDGE_SYSTEM, parse_judge_response};
@@ -21,6 +21,53 @@ pub struct MultiRoundDebate {
     pub config: DebateConfig,
 }
 
+/// A progress event emitted while a multi-round debate is running.
+///
+/// Observers are notified synchronously, so handlers should render or enqueue
+/// the event quickly rather than doing blocking work.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DebateEvent {
+    InitialPosition {
+        participant: usize,
+        model: Option<String>,
+        content: String,
+    },
+    RoundStarted {
+        round: usize,
+        max_rounds: usize,
+    },
+    PositionRevised {
+        round: usize,
+        participant: usize,
+        model: Option<String>,
+        /// The participant's full response, including its critique when present.
+        response: String,
+        /// The standalone position retained for the next round.
+        position: String,
+    },
+    PositionRetained {
+        round: usize,
+        participant: usize,
+        model: Option<String>,
+        reason: String,
+    },
+    RoundCompleted {
+        round: usize,
+        mean_similarity: Option<f64>,
+    },
+    Converged {
+        round: usize,
+        mean_similarity: f64,
+    },
+    AdjudicationStarted,
+}
+
+fn emit(observer: Option<&(dyn Fn(&DebateEvent) + Send + Sync)>, event: DebateEvent) {
+    if let Some(observer) = observer {
+        observer(&event);
+    }
+}
+
 pub struct DebateConfig {
     /// Maximum number of debate rounds.
     pub max_rounds: usize,
@@ -28,6 +75,13 @@ pub struct DebateConfig {
     pub convergence_threshold: f64,
     /// System prompt for debate participants.
     pub system_prompt: String,
+}
+
+struct DebateRun<'a> {
+    rounds_completed: usize,
+    round_history: Vec<Vec<String>>,
+    warnings: Vec<String>,
+    observer: Option<&'a (dyn Fn(&DebateEvent) + Send + Sync)>,
 }
 
 impl Default for DebateConfig {
@@ -114,6 +168,29 @@ impl MultiRoundDebate {
         participant_llms: &[&dyn LlmProvider],
         judge: &dyn LlmProvider,
     ) -> Result<ConsensusResult> {
+        self.resolve_with_participants_inner(candidates, participant_llms, judge, None).await
+    }
+
+    /// Run with an observer that receives progress events in completion order.
+    /// The observer runs on the debate task and should return promptly.
+    pub async fn resolve_with_participants_observed(
+        &self,
+        candidates: &[Candidate],
+        participant_llms: &[&dyn LlmProvider],
+        judge: &dyn LlmProvider,
+        observer: &(dyn Fn(&DebateEvent) + Send + Sync),
+    ) -> Result<ConsensusResult> {
+        self.resolve_with_participants_inner(candidates, participant_llms, judge, Some(observer))
+            .await
+    }
+
+    async fn resolve_with_participants_inner(
+        &self,
+        candidates: &[Candidate],
+        participant_llms: &[&dyn LlmProvider],
+        judge: &dyn LlmProvider,
+        observer: Option<&(dyn Fn(&DebateEvent) + Send + Sync)>,
+    ) -> Result<ConsensusResult> {
         if candidates.is_empty() {
             anyhow::bail!("No candidates provided");
         }
@@ -138,15 +215,28 @@ impl MultiRoundDebate {
         let mut round_history: Vec<Vec<String>> = vec![current_positions.clone()];
         let mut warnings = Vec::new();
 
+        for (participant, candidate) in candidates.iter().enumerate() {
+            emit(
+                observer,
+                DebateEvent::InitialPosition {
+                    participant,
+                    model: candidate.model.clone(),
+                    content: candidate.content.clone(),
+                },
+            );
+        }
+
         let mut actual_rounds = 0;
         for round in 1..=self.config.max_rounds {
             actual_rounds = round;
+            emit(observer, DebateEvent::RoundStarted { round, max_rounds: self.config.max_rounds });
 
             // Each participant independently blind-critiques the shuffled,
-            // anonymized positions and revises only its own. `join_all` polls
-            // borrowed provider futures concurrently without requiring the
-            // `'static` lifetime that spawned tasks would need.
-            let attempts = participant_llms.iter().enumerate().map(|(i, llm)| {
+            // anonymized positions and revises only its own. Futures are
+            // consumed in completion order so observers can render each
+            // response immediately without waiting for the slowest member.
+            let mut attempts = FuturesUnordered::new();
+            for (i, llm) in participant_llms.iter().enumerate() {
                 let prompt = blind_critique_prompt(
                     question,
                     &current_positions,
@@ -154,42 +244,70 @@ impl MultiRoundDebate {
                     round,
                     self.config.max_rounds,
                 );
-                async move {
+                attempts.push(async move {
                     let result = tokio::time::timeout(
                         llm.options().timeout,
                         llm.complete(&prompt, Some(&self.config.system_prompt)),
                     )
                     .await;
                     (i, result)
-                }
-            });
-            let mut new_positions = Vec::with_capacity(current_positions.len());
+                });
+            }
+            let mut new_positions = current_positions.clone();
             let mut refined_indices = Vec::with_capacity(current_positions.len());
-            for (i, result) in join_all(attempts).await {
+            while let Some((i, result)) = attempts.next().await {
+                let model = candidates[i].model.clone();
                 match result {
                     Ok(Ok(refined)) => {
-                        let refined = extract_final_answer(&refined);
-                        if refined.trim().is_empty() {
+                        let position = extract_final_answer(&refined);
+                        if position.trim().is_empty() {
+                            let reason = "returned an empty refinement".to_string();
                             warnings.push(format!(
-                                "debate round {round}: participant {i} returned an empty refinement; retained its previous position"
+                                "debate round {round}: participant {i} {reason}; retained its previous position"
                             ));
-                            new_positions.push(current_positions[i].clone());
+                            emit(
+                                observer,
+                                DebateEvent::PositionRetained {
+                                    round,
+                                    participant: i,
+                                    model,
+                                    reason,
+                                },
+                            );
                         } else {
                             refined_indices.push(i);
-                            new_positions.push(refined);
+                            new_positions[i] = position.clone();
+                            emit(
+                                observer,
+                                DebateEvent::PositionRevised {
+                                    round,
+                                    participant: i,
+                                    model,
+                                    response: refined,
+                                    position,
+                                },
+                            );
                         }
                     }
                     Ok(Err(error)) => {
+                        let reason = format!("failed: {error}");
                         warnings.push(format!(
                             "debate round {round}: participant {i} failed ({error}); retained its previous position"
                         ));
-                        new_positions.push(current_positions[i].clone());
+                        emit(
+                            observer,
+                            DebateEvent::PositionRetained { round, participant: i, model, reason },
+                        );
                     }
                     Err(_) => {
+                        let reason = "exceeded its request timeout".to_string();
                         warnings.push(format!(
                             "debate round {round}: participant {i} exceeded its request timeout; retained its previous position"
                         ));
-                        new_positions.push(current_positions[i].clone());
+                        emit(
+                            observer,
+                            DebateEvent::PositionRetained { round, participant: i, model, reason },
+                        );
                     }
                 }
             }
@@ -206,23 +324,29 @@ impl MultiRoundDebate {
 
             current_positions = new_positions;
             round_history.push(current_positions.clone());
+            emit(observer, DebateEvent::RoundCompleted { round, mean_similarity });
 
             if let Some(mean_similarity) = mean_similarity {
-                tracing::info!(
-                    "Debate round {}/{} complete (mean successful-position similarity: {:.3})",
-                    round,
-                    self.config.max_rounds,
-                    mean_similarity
-                );
-                if mean_similarity >= self.config.convergence_threshold {
+                if observer.is_none() {
                     tracing::info!(
-                        "Debate converged early at round {} (threshold: {:.2})",
+                        "Debate round {}/{} complete (mean successful-position similarity: {:.3})",
                         round,
-                        self.config.convergence_threshold
+                        self.config.max_rounds,
+                        mean_similarity
                     );
+                }
+                if mean_similarity >= self.config.convergence_threshold {
+                    emit(observer, DebateEvent::Converged { round, mean_similarity });
+                    if observer.is_none() {
+                        tracing::info!(
+                            "Debate converged early at round {} (threshold: {:.2})",
+                            round,
+                            self.config.convergence_threshold
+                        );
+                    }
                     break;
                 }
-            } else {
+            } else if observer.is_none() {
                 tracing::warn!(
                     "Debate round {}/{} had no successful refinements; convergence not evaluated",
                     round,
@@ -235,9 +359,7 @@ impl MultiRoundDebate {
             candidates,
             &current_positions,
             judge,
-            actual_rounds,
-            round_history,
-            warnings,
+            DebateRun { rounds_completed: actual_rounds, round_history, warnings, observer },
         )
         .await
     }
@@ -250,10 +372,9 @@ impl MultiRoundDebate {
         candidates: &[Candidate],
         final_positions: &[String],
         judge: &dyn LlmProvider,
-        actual_rounds: usize,
-        round_history: Vec<Vec<String>>,
-        mut warnings: Vec<String>,
+        run: DebateRun<'_>,
     ) -> Result<ConsensusResult> {
+        let DebateRun { rounds_completed, round_history, mut warnings, observer } = run;
         let positions_text = final_positions
             .iter()
             .enumerate()
@@ -265,10 +386,11 @@ impl MultiRoundDebate {
             .replace("{count}", &final_positions.len().to_string())
             .replace("{candidates}", &positions_text);
 
+        emit(observer, DebateEvent::AdjudicationStarted);
         let judge_response = judge.complete(&judge_prompt, Some(DEFAULT_JUDGE_SYSTEM)).await?;
 
         let mut metadata = HashMap::new();
-        metadata.insert("rounds_completed".to_string(), serde_json::json!(actual_rounds));
+        metadata.insert("rounds_completed".to_string(), serde_json::json!(rounds_completed));
         metadata.insert("round_history".to_string(), serde_json::json!(round_history));
         metadata.insert("blind".to_string(), serde_json::json!(true));
 
@@ -339,7 +461,7 @@ impl MultiRoundDebate {
             dissents,
             reasoning: Some(format!(
                 "{reasoning} (debate completed in {} round(s) of {} maximum)",
-                actual_rounds, self.config.max_rounds,
+                rounds_completed, self.config.max_rounds,
             )),
             metadata,
         })
@@ -349,6 +471,42 @@ impl MultiRoundDebate {
 impl Default for MultiRoundDebate {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl MultiRoundDebate {
+    /// Run a multi-provider debate while reporting progress in completion
+    /// order to `observer`.
+    pub async fn resolve_multi_observed(
+        &self,
+        candidates: &[Candidate],
+        llm: Option<&dyn LlmProvider>,
+        participants: Option<&MultiProvider>,
+        observer: &(dyn Fn(&DebateEvent) + Send + Sync),
+    ) -> Result<ConsensusResult> {
+        self.resolve_multi_inner(candidates, llm, participants, Some(observer)).await
+    }
+
+    async fn resolve_multi_inner(
+        &self,
+        candidates: &[Candidate],
+        llm: Option<&dyn LlmProvider>,
+        participants: Option<&MultiProvider>,
+        observer: Option<&(dyn Fn(&DebateEvent) + Send + Sync)>,
+    ) -> Result<ConsensusResult> {
+        let judge =
+            llm.ok_or_else(|| anyhow::anyhow!("MultiRoundDebate requires an LLM provider"))?;
+
+        let mut participant_llms: Vec<&dyn LlmProvider> = Vec::with_capacity(candidates.len());
+        for candidate in candidates {
+            let own = candidate
+                .model
+                .as_deref()
+                .and_then(|model| participants.and_then(|providers| providers.get(model)));
+            participant_llms.push(own.unwrap_or(judge));
+        }
+
+        self.resolve_with_participants_inner(candidates, &participant_llms, judge, observer).await
     }
 }
 
@@ -479,16 +637,7 @@ impl ConsensusStrategy for MultiRoundDebate {
         llm: Option<&dyn LlmProvider>,
         participants: Option<&MultiProvider>,
     ) -> Result<ConsensusResult> {
-        let judge =
-            llm.ok_or_else(|| anyhow::anyhow!("MultiRoundDebate requires an LLM provider"))?;
-
-        let mut participant_llms: Vec<&dyn LlmProvider> = Vec::with_capacity(candidates.len());
-        for c in candidates {
-            let own = c.model.as_deref().and_then(|m| participants.and_then(|p| p.get(m)));
-            participant_llms.push(own.unwrap_or(judge));
-        }
-
-        self.resolve_with_participants(candidates, &participant_llms, judge).await
+        self.resolve_multi_inner(candidates, llm, participants, None).await
     }
 }
 
@@ -496,6 +645,19 @@ impl ConsensusStrategy for MultiRoundDebate {
 mod tests {
     use super::*;
     use crate::provider::MockProvider;
+
+    struct DelayedProvider {
+        delay: std::time::Duration,
+        response: String,
+    }
+
+    #[async_trait]
+    impl LlmProvider for DelayedProvider {
+        async fn complete(&self, _prompt: &str, _system: Option<&str>) -> Result<String> {
+            tokio::time::sleep(self.delay).await;
+            Ok(self.response.clone())
+        }
+    }
 
     struct FailingProvider;
 
@@ -565,6 +727,67 @@ mod tests {
         let last = history.last().unwrap().as_array().unwrap();
         let positions: Vec<&str> = last.iter().filter_map(|p| p.as_str()).collect();
         assert_eq!(positions, vec!["From provider one", "From provider two"]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn observer_receives_each_revision_in_completion_order() {
+        let fast = DelayedProvider {
+            delay: std::time::Duration::from_millis(5),
+            response: "Fast critique.\nFINAL ANSWER: Fast revision".to_string(),
+        };
+        let slow = DelayedProvider {
+            delay: std::time::Duration::from_millis(200),
+            response: "Slow critique.\nFINAL ANSWER: Slow revision".to_string(),
+        };
+        let judge = MockProvider::fixed(judge_json(0.7));
+        let candidates = vec![
+            Candidate::new("Initial fast").with_model("fast-model"),
+            Candidate::new("Initial slow").with_model("slow-model"),
+        ];
+        let participants: Vec<&dyn LlmProvider> = vec![&fast, &slow];
+        let (sender, mut events) = tokio::sync::mpsc::unbounded_channel();
+        let observer = move |event: &DebateEvent| {
+            let _ = sender.send(event.clone());
+        };
+        let strategy = MultiRoundDebate::new().with_rounds(1);
+
+        let mut run = Box::pin(strategy.resolve_with_participants_observed(
+            &candidates,
+            &participants,
+            &judge,
+            &observer,
+        ));
+        let first_revision = tokio::time::timeout(std::time::Duration::from_millis(100), async {
+            loop {
+                tokio::select! {
+                    event = events.recv() => {
+                        if let DebateEvent::PositionRevised { model, response, .. } =
+                            event.expect("observer remains connected")
+                        {
+                            break (model, response);
+                        }
+                    }
+                    _ = &mut run => panic!("debate completed before the first revision event"),
+                }
+            }
+        })
+        .await
+        .expect("fast revision should be observable before the slow participant completes");
+
+        assert_eq!(first_revision.0.as_deref(), Some("fast-model"));
+        assert!(first_revision.1.contains("Fast critique."));
+
+        let result = run.await.unwrap();
+        let final_positions = result.metadata["round_history"].as_array().unwrap().last().unwrap();
+        assert_eq!(final_positions[0], serde_json::json!("Fast revision"));
+        assert_eq!(final_positions[1], serde_json::json!("Slow revision"));
+
+        let remaining: Vec<DebateEvent> = std::iter::from_fn(|| events.try_recv().ok()).collect();
+        assert!(remaining.iter().any(|event| matches!(
+            event,
+            DebateEvent::PositionRevised { model: Some(model), .. } if model == "slow-model"
+        )));
+        assert!(remaining.iter().any(|event| matches!(event, DebateEvent::AdjudicationStarted)));
     }
 
     #[tokio::test]
