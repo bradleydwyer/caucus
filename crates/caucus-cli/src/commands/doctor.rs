@@ -140,11 +140,116 @@ async fn report(config_path: Option<PathBuf>, config: &Config) -> serde_json::Va
     })
 }
 
-fn markdown_cell(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('|', "\\|").replace(['\r', '\n'], "<br>")
+fn terminal_cell(value: &str) -> String {
+    value.replace(['\r', '\n'], " ").replace('`', "")
 }
 
-fn render_markdown(report: &serde_json::Value) -> String {
+fn display_width(value: &str) -> usize {
+    value.chars().count()
+}
+
+fn hard_wrap(value: &str, width: usize) -> Vec<String> {
+    let chars: Vec<char> = value.chars().collect();
+    chars.chunks(width).map(|chunk| chunk.iter().collect()).collect()
+}
+
+fn wrap_cell(value: &str, width: usize) -> Vec<String> {
+    let value = terminal_cell(value);
+    if value.is_empty() {
+        return vec![String::new()];
+    }
+
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for word in value.split_whitespace() {
+        for part in hard_wrap(word, width) {
+            if current.is_empty() {
+                current = part;
+            } else if display_width(&current) + 1 + display_width(&part) <= width {
+                current.push(' ');
+                current.push_str(&part);
+            } else {
+                lines.push(std::mem::take(&mut current));
+                current = part;
+            }
+        }
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines
+}
+
+fn table_border(widths: &[usize], left: char, join: char, right: char) -> String {
+    let segments = widths
+        .iter()
+        .map(|width| "─".repeat(width + 2))
+        .collect::<Vec<_>>()
+        .join(&join.to_string());
+    format!("{left}{segments}{right}\n")
+}
+
+fn push_table_row(
+    output: &mut String,
+    cells: &[String],
+    widths: &[usize],
+    right_aligned: &[usize],
+) {
+    let wrapped: Vec<Vec<String>> =
+        cells.iter().enumerate().map(|(index, cell)| wrap_cell(cell, widths[index])).collect();
+    let height = wrapped.iter().map(Vec::len).max().unwrap_or(1);
+
+    for line_index in 0..height {
+        output.push('│');
+        for (column, width) in widths.iter().enumerate() {
+            let cell = wrapped[column].get(line_index).map(String::as_str).unwrap_or("");
+            let padding = width.saturating_sub(display_width(cell));
+            output.push(' ');
+            if right_aligned.contains(&column) {
+                output.push_str(&" ".repeat(padding));
+                output.push_str(cell);
+            } else {
+                output.push_str(cell);
+                output.push_str(&" ".repeat(padding));
+            }
+            output.push(' ');
+            output.push('│');
+        }
+        output.push('\n');
+    }
+}
+
+fn render_table(
+    headers: &[&str],
+    rows: &[Vec<String>],
+    max_widths: &[usize],
+    right_aligned: &[usize],
+) -> String {
+    debug_assert_eq!(headers.len(), max_widths.len());
+    debug_assert!(rows.iter().all(|row| row.len() == headers.len()));
+
+    let header_cells: Vec<String> = headers.iter().map(|header| (*header).to_string()).collect();
+    let mut widths: Vec<usize> = headers.iter().map(|header| display_width(header)).collect();
+    for row in rows {
+        for (index, cell) in row.iter().enumerate() {
+            widths[index] = widths[index].max(display_width(&terminal_cell(cell)));
+        }
+    }
+    for (index, width) in widths.iter_mut().enumerate() {
+        *width = (*width).min(max_widths[index].max(display_width(headers[index])));
+    }
+
+    let mut output = table_border(&widths, '┌', '┬', '┐');
+    push_table_row(&mut output, &header_cells, &widths, &[]);
+    output.push_str(&table_border(&widths, '├', '┼', '┤'));
+    for row in rows {
+        push_table_row(&mut output, row, &widths, right_aligned);
+    }
+    output.push_str(&table_border(&widths, '└', '┴', '┘'));
+    output
+}
+
+fn render_terminal(report: &serde_json::Value) -> String {
     let mut output = String::new();
     let config = &report["config"];
     let valid = config["valid"].as_bool() == Some(true);
@@ -160,29 +265,34 @@ fn render_markdown(report: &serde_json::Value) -> String {
     };
     let default_profile = config["default_profile"].as_str().unwrap_or("none");
 
-    writeln!(output, "## Config\n").unwrap();
-    writeln!(output, "| Field | Value |").unwrap();
-    writeln!(output, "| :--- | :--- |").unwrap();
-    writeln!(output, "| Path | {} |", markdown_cell(path)).unwrap();
-    writeln!(output, "| Status | {} |", markdown_cell(&status)).unwrap();
-    writeln!(output, "| Default profile | {} |", markdown_cell(default_profile)).unwrap();
-    writeln!(output, "| User profiles | {} |", config["user_profiles"]).unwrap();
-    writeln!(output, "| Built-in profiles | {} |", config["builtin_profiles"]).unwrap();
+    writeln!(output, "Config").unwrap();
+    output.push_str(&render_table(
+        &["Field", "Value"],
+        &[
+            vec!["Path".into(), path.into()],
+            vec!["Status".into(), status],
+            vec!["Default profile".into(), default_profile.into()],
+            vec!["User profiles".into(), config["user_profiles"].to_string()],
+            vec!["Built-in profiles".into(), config["builtin_profiles"].to_string()],
+        ],
+        &[20, 92],
+        &[],
+    ));
 
     if let Some(warnings) = config["warnings"].as_array()
         && !warnings.is_empty()
     {
-        writeln!(output, "\n## Config warnings\n").unwrap();
-        writeln!(output, "| Warning |").unwrap();
-        writeln!(output, "| :--- |").unwrap();
-        for warning in warnings.iter().filter_map(|value| value.as_str()) {
-            writeln!(output, "| {} |", markdown_cell(warning)).unwrap();
-        }
+        writeln!(output, "\nConfig warnings").unwrap();
+        let rows = warnings
+            .iter()
+            .filter_map(|value| value.as_str())
+            .map(|warning| vec![warning.to_string()])
+            .collect::<Vec<_>>();
+        output.push_str(&render_table(&["Warning"], &rows, &[112], &[]));
     }
 
-    writeln!(output, "\n## Adapters\n").unwrap();
-    writeln!(output, "| Adapter | Transport | Stability | Status | Efforts | Notes |").unwrap();
-    writeln!(output, "| :--- | :--- | :--- | :--- | :--- | :--- |").unwrap();
+    let mut adapter_rows = Vec::new();
+    let mut detail_rows = Vec::new();
     for row in report["adapters"].as_array().into_iter().flatten() {
         let ready = row["ready"].as_bool().unwrap_or(false);
         let readiness = row["readiness"].as_str().unwrap_or("");
@@ -197,54 +307,71 @@ fn render_markdown(report: &serde_json::Value) -> String {
                 }
             })
             .unwrap_or_else(|| "none".to_string());
-        writeln!(
-            output,
-            "| {} | {} | {} | {} | {} | {} |",
-            markdown_cell(row["id"].as_str().unwrap_or("")),
-            markdown_cell(row["transport"].as_str().unwrap_or("")),
-            markdown_cell(row["stability"].as_str().unwrap_or("")),
-            markdown_cell(&status),
-            markdown_cell(&efforts),
-            markdown_cell(row["notes"].as_str().unwrap_or("")),
-        )
-        .unwrap();
+        let id = row["id"].as_str().unwrap_or("").to_string();
+        adapter_rows.push(vec![
+            id.clone(),
+            row["transport"].as_str().unwrap_or("").to_string(),
+            row["stability"].as_str().unwrap_or("").to_string(),
+            status,
+        ]);
+        detail_rows.push(vec![id, efforts, row["notes"].as_str().unwrap_or("").to_string()]);
     }
+    writeln!(output, "\nAdapters").unwrap();
+    output.push_str(&render_table(
+        &["Adapter", "Transport", "Stability", "Status"],
+        &adapter_rows,
+        &[10, 14, 14, 64],
+        &[],
+    ));
+    writeln!(output, "\nAdapter capabilities").unwrap();
+    output.push_str(&render_table(
+        &["Adapter", "Efforts", "Notes"],
+        &detail_rows,
+        &[10, 32, 64],
+        &[],
+    ));
 
-    writeln!(output, "\n## Profiles\n").unwrap();
-    writeln!(output, "| Profile | Source | Strategy | Status | Ready | Quorum |").unwrap();
-    writeln!(output, "| :--- | :--- | :--- | :--- | ---: | ---: |").unwrap();
+    let mut profile_rows = Vec::new();
     for row in report["profiles"].as_array().into_iter().flatten() {
         let usable = row["usable"].as_bool().unwrap_or(false);
         let status = if usable { "✓ usable" } else { "✗ unavailable" };
         let source = if row["builtin"].as_bool() == Some(true) { "built-in" } else { "user" };
-        writeln!(
-            output,
-            "| {} | {source} | {} | {status} | {} / {} | {} |",
-            markdown_cell(row["name"].as_str().unwrap_or("")),
-            markdown_cell(row["strategy"].as_str().unwrap_or("")),
-            row["ready_members"],
-            row["members"],
-            row["quorum"],
-        )
-        .unwrap();
+        profile_rows.push(vec![
+            row["name"].as_str().unwrap_or("").to_string(),
+            source.to_string(),
+            row["strategy"].as_str().unwrap_or("").to_string(),
+            status.to_string(),
+            format!("{} / {}", row["ready_members"], row["members"]),
+            row["quorum"].to_string(),
+        ]);
     }
+    writeln!(output, "\nProfiles").unwrap();
+    output.push_str(&render_table(
+        &["Profile", "Source", "Strategy", "Status", "Ready", "Quorum"],
+        &profile_rows,
+        &[16, 10, 16, 16, 10, 10],
+        &[4, 5],
+    ));
 
     let summary = &report["summary"];
-    writeln!(output, "\n## Summary\n").unwrap();
-    writeln!(output, "| Metric | Ready | Total |").unwrap();
-    writeln!(output, "| :--- | ---: | ---: |").unwrap();
-    writeln!(
-        output,
-        "| Adapters | {} | {} |",
-        summary["adapters_ready"], summary["adapters_total"]
-    )
-    .unwrap();
-    writeln!(
-        output,
-        "| Profiles | {} | {} |",
-        summary["profiles_usable"], summary["profiles_total"]
-    )
-    .unwrap();
+    writeln!(output, "\nSummary").unwrap();
+    output.push_str(&render_table(
+        &["Metric", "Ready", "Total"],
+        &[
+            vec![
+                "Adapters".into(),
+                summary["adapters_ready"].to_string(),
+                summary["adapters_total"].to_string(),
+            ],
+            vec![
+                "Profiles".into(),
+                summary["profiles_usable"].to_string(),
+                summary["profiles_total"].to_string(),
+            ],
+        ],
+        &[16, 10, 10],
+        &[1, 2],
+    ));
 
     output
 }
@@ -269,7 +396,7 @@ pub async fn run(args: DoctorArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    print!("{}", render_markdown(&report));
+    print!("{}", render_terminal(&report));
     Ok(())
 }
 
@@ -328,7 +455,7 @@ members = ["codex:default@high"]
     }
 
     #[test]
-    fn markdown_report_uses_tables_and_escapes_cells() {
+    fn terminal_report_renders_aligned_tables() {
         let report = serde_json::json!({
             "config": {
                 "path": "/tmp/caucus.toml",
@@ -364,16 +491,21 @@ members = ["codex:default@high"]
             },
         });
 
-        let rendered = render_markdown(&report);
-        assert!(
-            rendered.contains("| Adapter | Transport | Stability | Status | Efforts | Notes |")
-        );
-        assert!(
-            rendered
-                .contains("| claude | command | stable | ✓ ready | high, xhigh | native \\| CLI |")
-        );
-        assert!(rendered.contains("| old \\| key |"));
-        assert!(rendered.contains("| deep | user | judge | ✓ usable | 1 / 1 | 1 |"));
-        assert!(rendered.contains("| Adapters | 1 | 1 |"));
+        let rendered = render_terminal(&report);
+        assert!(rendered.contains("┌"));
+        assert!(rendered.contains("│ Adapter │ Transport │ Stability │ Status  │"));
+        assert!(rendered.contains("│ claude  │ command   │ stable    │ ✓ ready │"));
+        assert!(rendered.contains("native | CLI"));
+        assert!(rendered.contains("old | key"));
+        assert!(rendered.contains("│ deep    │ user   │ judge    │ ✓ usable │ 1 / 1 │      1 │"));
+        assert!(!rendered.contains("| Adapter |"));
+        assert!(!rendered.contains("## Adapters"));
+    }
+
+    #[test]
+    fn terminal_table_wraps_long_cells_inside_its_border() {
+        let rendered = render_table(&["Name"], &[vec!["abcdefgh".to_string()]], &[4], &[]);
+        assert!(rendered.contains("│ abcd │"));
+        assert!(rendered.contains("│ efgh │"));
     }
 }

@@ -137,7 +137,7 @@ Adapter compatibility labels, shown by `caucus doctor`:
 | `experimental` | kimi, opencode, gemini, grok, acp | Works, but flags/pins may shift |
 
 ```bash
-caucus doctor          # Markdown readiness tables (or --json)
+caucus doctor          # rendered terminal readiness tables (or --json)
 caucus profiles        # all profiles with resolved members (or a name, or --json)
 ```
 
