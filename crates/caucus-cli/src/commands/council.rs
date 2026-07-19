@@ -36,11 +36,27 @@ pub const AUTO_EFFORT: &str = "high";
 /// order. Returns `(None, Config::default())` when no file exists. Legacy
 /// schema migration warnings are surfaced on stderr.
 pub fn load_config(explicit: Option<&Path>) -> anyhow::Result<(Option<PathBuf>, Config)> {
+    load_config_with_warnings(explicit, true)
+}
+
+/// Load configuration without printing migration warnings. Commands that
+/// render a structured diagnostic report can surface `Config::warnings`
+/// themselves instead of mixing unformatted stderr into their output.
+pub fn load_config_quiet(explicit: Option<&Path>) -> anyhow::Result<(Option<PathBuf>, Config)> {
+    load_config_with_warnings(explicit, false)
+}
+
+fn load_config_with_warnings(
+    explicit: Option<&Path>,
+    print_warnings: bool,
+) -> anyhow::Result<(Option<PathBuf>, Config)> {
     match Config::discover(explicit)? {
         Some((path, config)) => {
             validate_adapter_configs(&config)?;
-            for warning in &config.warnings {
-                eprintln!("config warning: {warning}");
+            if print_warnings {
+                for warning in &config.warnings {
+                    eprintln!("config warning: {warning}");
+                }
             }
             Ok((Some(path), config))
         }

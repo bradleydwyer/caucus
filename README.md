@@ -126,6 +126,7 @@ claude:claude-fable-5@xhigh
 codex:default@xhigh
 opencode:zai-coding-plan/glm-5.2@xhigh
 kimi:kimi-code/k3@high
+grok:grok-4.5@high
 ```
 
 Adapter compatibility labels, shown by `caucus doctor`:
@@ -136,7 +137,7 @@ Adapter compatibility labels, shown by `caucus doctor`:
 | `experimental` | kimi, opencode, gemini, grok, acp | Works, but flags/pins may shift |
 
 ```bash
-caucus doctor          # readiness, config validity, profile health (or --json)
+caucus doctor          # Markdown readiness tables (or --json)
 caucus profiles        # all profiles with resolved members (or a name, or --json)
 ```
 

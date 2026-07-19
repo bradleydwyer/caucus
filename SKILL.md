@@ -86,7 +86,7 @@ classifications. `--max-requests` is a hard cap; `--budget-usd` is advisory.
 ### 2b. Inspect Councils
 
 ```bash
-caucus doctor          # adapter readiness + config health (--json available)
+caucus doctor          # Markdown readiness tables (--json available)
 caucus profiles        # list profiles and exact members (or a name / --json)
 ```
 
@@ -94,7 +94,7 @@ Adapters are labeled `stable` (claude, codex, ollama, lmstudio) or
 `experimental` (kimi, opencode, gemini, grok, acp). The built-in `deep`
 profile: `claude:opus@xhigh`, `claude:claude-fable-5@xhigh`,
 `codex:default@xhigh`, `opencode:zai-coding-plan/glm-5.2@xhigh`,
-`kimi:kimi-code/k3@high`.
+`kimi:kimi-code/k3@high`, `grok:grok-4.5@high`.
 
 Profile `deadline_secs` is a whole-run wall-clock limit;
 `request_timeout_secs` bounds each provider request independently. Adapter

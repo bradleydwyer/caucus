@@ -2314,6 +2314,7 @@ mod tests {
                 "codex:default@xhigh",
                 "opencode:zai-coding-plan/glm-5.2@xhigh",
                 "kimi:kimi-code/k3@high",
+                "grok:grok-4.5@high",
             ]
         );
     }
