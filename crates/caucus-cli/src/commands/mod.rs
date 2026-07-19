@@ -1,7 +1,12 @@
 pub mod ask;
 pub mod bench;
 pub mod compare;
+pub mod council;
 pub mod debate;
+pub mod doctor;
+pub mod profiles;
+pub mod review;
+pub mod run;
 pub mod serve;
 
 use caucus_core::{HttpProvider, LlmProvider, MultiProvider};

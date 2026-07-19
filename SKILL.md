@@ -54,6 +54,8 @@ Always use `-f json` for parseable output.
 caucus "prompt" -f json                                          # all models, judge strategy
 caucus "prompt" -m gpt-5.2,claude-opus-4-6 -f json              # specific models
 caucus "prompt" -s debate -f json                                # debate strategy
+caucus "prompt" --profile deep -f json                           # council profile (exact members)
+caucus "prompt" --auto -f json                                   # zero-key council, no API keys
 caucus compare "prompt" --strategies majority-vote,judge -f json # compare strategies
 caucus "prompt" -v -f json                                       # verbose (individual responses)
 caucus "prompt" -f supreme-court                                 # dissent/concurrence format
@@ -62,6 +64,40 @@ caucus "prompt" -f supreme-court                                 # dissent/concu
 **Strategies:** `majority-vote`, `weighted-vote`, `judge` (default), `debate`, `debate-then-vote`
 
 **Output formats:** `plain` (default), `json`, `supreme-court`, `detailed`
+
+### 2a. Review Code or Diffs
+
+For adjudicated code/text review (independent reviews → anonymized blind peer
+votes → judged verdicts with a provenance receipt):
+
+```bash
+caucus review --file src/main.rs --format json      # one file
+caucus review --git-diff                            # working-tree diff
+caucus review --staged --profile deep               # staged diff, exact council
+git diff | caucus review --format json              # stdin
+caucus review --staged --manifest run.json --resume # checkpoint + resume
+```
+
+Receipts are Markdown (default) or JSON (`--format`), with deterministic run
+ids, raw votes/dissent, adjudications, and unanimous/majority/disputed
+classifications. `--max-requests` is a hard cap; `--budget-usd` is advisory.
+
+### 2b. Inspect Councils
+
+```bash
+caucus doctor          # adapter readiness + config health (--json available)
+caucus profiles        # list profiles and exact members (or a name / --json)
+```
+
+Adapters are labeled `stable` (claude, codex, ollama, lmstudio) or
+`experimental` (kimi, opencode, gemini, grok, acp). The built-in `deep`
+profile: `claude:opus@xhigh`, `claude:claude-fable-5@xhigh`,
+`codex:default@xhigh`, `opencode:zai-coding-plan/glm-5.2@xhigh`,
+`kimi:kimi-code/k3@high`.
+
+Profile `deadline_secs` is a whole-run wall-clock limit;
+`request_timeout_secs` bounds each provider request independently. Adapter
+`timeout_secs` can impose a stricter process limit.
 
 ### 3. Present Results
 

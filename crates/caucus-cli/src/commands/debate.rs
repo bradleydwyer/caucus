@@ -1,9 +1,9 @@
 use caucus_core::strategy::debate::DebateConfig;
-use caucus_core::{Candidate, ConsensusStrategy, MultiRoundDebate, OutputFormat};
+use caucus_core::{Candidate, ConsensusStrategy, FanoutConfig, MultiRoundDebate, OutputFormat};
 use clap::Args;
 use colored::Colorize;
 
-use super::{build_provider, build_single_provider, default_models};
+use super::{build_provider, default_models};
 
 #[derive(Args)]
 pub struct DebateArgs {
@@ -35,36 +35,55 @@ pub async fn run(args: DebateArgs) -> anyhow::Result<()> {
         models.len(),
     );
 
-    // Generate initial positions
+    // Generate initial positions concurrently. A single unavailable member is
+    // a recorded warning rather than aborting an otherwise viable debate.
     let provider = build_provider(&models)?;
-    let mut candidates = Vec::new();
-
-    for model in &models {
-        let llm =
-            provider.get(model).ok_or_else(|| anyhow::anyhow!("No provider for model: {model}"))?;
-
-        eprintln!("  {} Getting initial position from {}...", "·".dimmed(), model.yellow());
-        let response = llm.complete(&args.prompt, None).await?;
-        eprintln!("  {} {} responded ({} chars)", "✓".green(), model, response.len(),);
-        candidates.push(
-            Candidate::new(response)
-                .with_model(model.clone())
-                .with_metadata("question", serde_json::json!(&args.prompt)),
-        );
+    let report = caucus_core::provider::fanout(
+        &provider,
+        &args.prompt,
+        None,
+        FanoutConfig { quorum: 1, ..Default::default() },
+    )
+    .await;
+    for warning in report.warnings() {
+        eprintln!("  {} {}", "✗".red(), warning);
     }
+    if !report.quorum_met() {
+        anyhow::bail!("no debate participant returned an initial position");
+    }
+    let candidates: Vec<Candidate> = report
+        .successes
+        .iter()
+        .map(|success| {
+            eprintln!(
+                "  {} {} responded ({} chars)",
+                "✓".green(),
+                success.model,
+                success.content.len(),
+            );
+            Candidate::new(success.content.clone())
+                .with_model(success.model.clone())
+                .with_metadata("question", serde_json::json!(&args.prompt))
+        })
+        .collect();
 
     eprintln!();
 
     // Run debate
-    let judge_model = models.first().expect("no models configured");
-    let judge_llm = build_single_provider(judge_model)?;
+    let judge_model = candidates
+        .first()
+        .and_then(|candidate| candidate.model.as_deref())
+        .ok_or_else(|| anyhow::anyhow!("no successful participant available as judge"))?;
+    let judge_llm = provider
+        .get(judge_model)
+        .ok_or_else(|| anyhow::anyhow!("successful debate provider '{judge_model}' disappeared"))?;
 
     let strategy = MultiRoundDebate::with_config(DebateConfig {
         max_rounds: args.rounds,
         ..Default::default()
     });
 
-    let result = strategy.resolve(&candidates, Some(judge_llm.as_ref())).await?;
+    let result = strategy.resolve_multi(&candidates, Some(judge_llm), Some(&provider)).await?;
 
     eprintln!(
         "\n{} Debate concluded (agreement: {:.0}%)\n",

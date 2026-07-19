@@ -33,7 +33,7 @@ impl MajorityVote {
 }
 
 /// Compute normalized similarity between two strings using bigram overlap.
-fn bigram_similarity(a: &str, b: &str) -> f64 {
+pub(crate) fn bigram_similarity(a: &str, b: &str) -> f64 {
     let a = a.to_lowercase();
     let b = b.to_lowercase();
 
@@ -169,16 +169,27 @@ impl WeightedVote {
     }
 
     fn weight_for(&self, candidate: &Candidate) -> f64 {
-        // Priority: confidence > model weight > default
-        if let Some(conf) = candidate.confidence {
+        // Priority: confidence > model weight > default. Provider output and
+        // HTTP input can contain non-finite or non-positive floating-point
+        // values; never let those reach sorting or the agreement division.
+        if let Some(conf) = candidate.confidence
+            && conf.is_finite()
+            && conf > 0.0
+        {
             return conf;
         }
         if let Some(model) = &candidate.model
             && let Some(w) = self.model_weights.get(model)
+            && w.is_finite()
+            && *w > 0.0
         {
             return *w;
         }
-        self.default_weight
+        if self.default_weight.is_finite() && self.default_weight > 0.0 {
+            self.default_weight
+        } else {
+            1.0
+        }
     }
 }
 
@@ -317,6 +328,21 @@ mod tests {
         let strategy = WeightedVote::new().with_threshold(0.3);
         let result = strategy.resolve(&candidates, None).await.unwrap();
         assert_eq!(result.content, "Answer A");
+    }
+
+    #[tokio::test]
+    async fn weighted_vote_sanitizes_non_finite_and_non_positive_weights() {
+        let candidates = vec![
+            Candidate::new("Answer A").with_confidence(f64::NAN),
+            Candidate::new("Answer B completely different").with_confidence(f64::INFINITY),
+            Candidate::new("Answer C also different").with_confidence(-2.0),
+        ];
+        let strategy =
+            WeightedVote::new().with_threshold(0.9).with_model_weight("unused", f64::NAN);
+        let result = strategy.resolve(&candidates, None).await.unwrap();
+
+        assert!(result.agreement_score.is_finite());
+        assert!((0.0..=1.0).contains(&result.agreement_score));
     }
 
     #[tokio::test]

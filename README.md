@@ -31,27 +31,33 @@ Then: `from caucus import consensus, Candidate`
 
 ## Quick start
 
+Already signed in to one of the supported CLIs? You do not need API keys.
+
 ```bash
-# Set API keys (or put them in .env)
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-export GOOGLE_API_KEY=AI...
-export XAI_API_KEY=xai-...
+# See what is installed and ready
+caucus doctor
 
-# Just ask. Queries all configured models, synthesizes the best answer.
-caucus "What causes inflation?"
+# Build a council from ready CLIs and local models
+caucus ask --auto "What causes inflation?"
 
-# Pick your models
-caucus "What causes inflation?" -m gpt-5.2,claude-opus-4-6,gemini-3.1-pro-preview
+# Or use the built-in frontier profile
+caucus ask --profile deep "What causes inflation?"
 
-# See what's happening under the hood
-caucus "What causes inflation?" -v
-
-# Override strategy and format
-caucus "What causes inflation?" -s debate -f supreme-court
+# Show the members and the final reasoning
+caucus ask --profile deep --verbose --format detailed "What causes inflation?"
 ```
 
-No subcommand needed. caucus auto-detects configured models, uses `judge` strategy by default, and prints just the answer.
+Direct API models still work:
+
+```bash
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+
+caucus "What causes inflation?" -m gpt-5.2,claude-opus-4-6
+```
+
+For the direct API form, `ask` is optional. caucus detects configured API
+models, uses `judge`, and prints the answer.
 
 ## Strategies
 
@@ -81,14 +87,108 @@ See also: [verbose output](examples/verbose.md), [debate with supreme-court form
 ```bash
 caucus "prompt"
 caucus ask "prompt" --strategy debate --format supreme-court
+caucus ask "prompt" --profile deep          # council profile (exact members)
+caucus ask "prompt" --auto                  # ready subscription CLIs + local models
+caucus review --git-diff                    # adjudicated multi-model code review
 caucus compare "prompt" --strategies majority-vote,judge
 caucus debate "prompt" --rounds 3
 caucus bench tests.jsonl -o results.json
+caucus profiles                             # list built-in and user profiles
+caucus doctor                               # adapter readiness + config health
 caucus serve --port 8080
 caucus serve --mcp
 ```
 
+## Councils and profiles
+
+A **council** is a named panel of exact member specs (`utility:model@effort`).
+`ask` and `review` accept `--profile NAME` (defaulting to the configured
+`default_profile`, then the built-in `deep`) or `--auto`, which assembles a
+zero-key council from locally discovered CLI adapters and local servers. No
+API keys required, and every exclusion is reported with its reason.
+
+The built-in `deep` profile (quorum 3, whole-run deadline 600s, judge strategy) has
+exactly these members:
+
+```
+claude:opus@xhigh
+claude:claude-fable-5@xhigh
+codex:default@xhigh
+opencode:zai-coding-plan/glm-5.2@xhigh
+kimi:kimi-code/k3@high
+```
+
+Adapter compatibility labels, shown by `caucus doctor`:
+
+| Label | Adapters | Meaning |
+|-------|----------|---------|
+| `stable` | claude, codex, ollama, lmstudio | Supported, expected to work |
+| `experimental` | kimi, opencode, gemini, grok, acp | Works, but flags/pins may shift |
+
+```bash
+caucus doctor          # readiness, config validity, profile health (or --json)
+caucus profiles        # all profiles with resolved members (or a name, or --json)
+```
+
+Kimi effort is set for each child process with
+`KIMI_MODEL_THINKING_EFFORT`; caucus does not edit Kimi's config. Grok Build
+accepts `low`, `medium`, and `high` only, so its strongest profile spec is
+`grok:grok-4.5@high`.
+
+## Adjudicated review
+
+`caucus review` is a fixed four-phase review pipeline (not a generic DAG):
+
+1. **Review:** each member independently reviews the input and returns
+   findings under a strict JSON schema (direct or fenced JSON only; prose is
+   never accepted as findings).
+2. **Anonymize:** findings get deterministic anonymous source IDs.
+3. **Vote:** blind peer support/oppose/abstain votes with evidence-linked
+   reasons over all anonymized findings.
+4. **Adjudicate:** a council judge accepts or rejects each finding and cites
+   the evidence and raw votes.
+
+Accepted findings are classified `unanimous`, `majority`, or `disputed` from
+the raw votes. Partial peer failures are warnings; review and voting require
+quorum. Adjudication uses the profile's judge. Bad model output never becomes
+a made-up vote or verdict.
+
+```bash
+caucus review --file src/main.rs              # exactly one input:
+caucus review --git-diff                      #   --file, --git-diff,
+caucus review --staged                        #   --staged, or stdin (default)
+git diff | caucus review
+caucus review --staged --profile deep --format json --output receipt.json
+# Start a checkpointed run
+caucus review --git-diff --manifest run.json
+
+# Resume it after an interruption
+caucus review --git-diff --manifest run.json --resume
+```
+
+The decision receipt is Markdown or JSON. It includes run and input hashes,
+member details, per-phase status, raw votes, and adjudication. Warnings plus
+deadline and request-count data are included too. See
+[examples/review-receipt.md](examples/review-receipt.md).
+
+Each completed review stage is checkpointed to a small versioned JSON file next
+to `--manifest` (or `.caucus-review.checkpoint.json`). `--resume` checks the
+input and options before reusing completed work.
+
+`--budget-usd` is **advisory only**: current transports expose no cost data,
+so it is recorded with a warning but not enforced. `--max-requests` is a hard
+cap across all phases, and it is cumulative across resumed invocations. The
+request count persists in the checkpoint, so a cap applies to the whole run,
+not to each `caucus review` invocation.
+
+Git input runs as explicit argv (`git diff [--staged]`). No shell involved.
+
 ## HTTP API
+
+The server binds to `127.0.0.1` by default and has no authentication. Do not
+expose it to a LAN or the internet. HTTP requests cannot run installed command
+or ACP adapters. Use the normal CLI commands for installed utilities. ACP is
+not implemented yet.
 
 ```bash
 caucus serve --port 8080
@@ -101,6 +201,11 @@ curl -X POST http://localhost:8080/v1/consensus \
     "format": "json"
   }'
 ```
+
+`/v1/consensus` also accepts `judge_model` for judge/debate strategies.
+`/v1/pipeline` runs configured pipeline steps over HTTP providers. `caucus
+serve --mcp` currently exposes majority and weighted consensus over supplied
+answers.
 
 ## Rust library
 
@@ -136,7 +241,8 @@ print(result.agreement_score)  # 0.67
 
 ## Claude Code Skill
 
-caucus includes a [skill](skill/SKILL.md) for Claude Code. Install it with [equip](https://github.com/bradleydwyer/equip):
+caucus includes a [skill](SKILL.md) for Claude Code. Install it with
+[equip](https://github.com/bradleydwyer/equip):
 
 ```bash
 equip install bradleydwyer/caucus
@@ -157,6 +263,66 @@ XAI_API_KEY=xai-...
 
 The CLI auto-loads `.env` from the current directory. You can also pass `--env path/to/.env`.
 
+**Credential handling:** caucus does not scrape credentials. Discovery checks
+PATH and local server ports. The Gemini adapter checks that `GEMINI_API_KEY`
+exists, but never reads or prints its value.
+
+Profile adapters use each CLI's existing login. `grok:` uses Grok Build;
+legacy `--models grok-*` uses the xAI API. Kimi effort is passed through the
+non-secret `KIMI_MODEL_THINKING_EFFORT` child environment variable.
+
+### Config file
+
+Profile and adapter config lives in TOML. Discovery order:
+`--config PATH`, then `./caucus.toml`, then
+`$XDG_CONFIG_HOME/caucus/config.toml`, then `~/.config/caucus/config.toml`.
+See [examples/config.toml](examples/config.toml) and
+[examples/caucus.toml](examples/caucus.toml).
+
+```toml
+default_profile = "deep"          # falls back to built-in `deep` when unset
+
+[profiles.frontier]               # user profiles shadow built-ins
+description = "..."
+strategy = "judge"                # strategy used by `ask`
+quorum = 3                        # default: member count
+deadline_secs = 600               # whole-run wall-clock limit
+request_timeout_secs = 240        # maximum for each provider request
+budget_usd = 5.0                  # advisory (see review docs)
+judge = "claude:opus@max"         # optional designated judge (default: first member)
+members = [
+  "claude:opus@xhigh",
+  "codex:default@xhigh",
+  "kimi:kimi-code/k3@high",
+  "grok:grok-4.5@high",
+]
+
+[adapters.claude]                 # per-adapter overrides
+binary_path = "/usr/local/bin/claude"
+timeout_secs = 900
+max_stdout_bytes = 2097152
+max_stderr_bytes = 262144
+env = { NO_COLOR = "1" }         # passed only to this adapter process
+
+[adapters.ollama]
+model = "llama3.2:latest"         # pin used by --auto when discovery finds none
+```
+
+Member specs are `utility:model@effort`; the model id is passed through
+verbatim. Effort support: claude `[low, medium, high, xhigh, max]`, codex
+`[minimal, low, medium, high, xhigh]`, kimi `[low, high, max]`, opencode all
+six, grok `[low, medium, high]`. No effort: ollama / lmstudio / gemini / acp.
+
+**Legacy profile fields:** the previous schema's `models`, `timeout_seconds`,
+and `deadline_seconds` keys are still accepted. They are migrated in memory
+only. Your file is never edited, and every migration prints a
+`config warning:` telling you exactly what changed: `models` becomes
+`members`, `timeout_seconds` becomes `request_timeout_secs`, and
+`deadline_seconds` becomes the whole-run `deadline_secs`. When both legacy
+fields are present, both limits are preserved.
+Legacy member strings work too: a pin-less entry like `codex@xhigh` means
+`codex:default@xhigh`, and the `glm` utility alias resolves to `opencode`.
+
 ## License
 
 MIT
@@ -164,12 +330,14 @@ MIT
 ## More Tools
 
 **Naming & Availability**
-- [available](https://github.com/bradleydwyer/available) — AI-powered project name finder (uses parked, staked & published)
-- [parked](https://github.com/bradleydwyer/parked) — Domain availability checker (DNS → WHOIS → RDAP)
-- [staked](https://github.com/bradleydwyer/staked) — Package registry name checker (npm, PyPI, crates.io + 19 more)
-- [published](https://github.com/bradleydwyer/published) — App store name checker (App Store & Google Play)
+
+- [available](https://github.com/bradleydwyer/available): AI-powered project name finder (uses parked, staked & published)
+- [parked](https://github.com/bradleydwyer/parked): Domain availability checker (DNS → WHOIS → RDAP)
+- [staked](https://github.com/bradleydwyer/staked): Package registry name checker (npm, PyPI, crates.io + 19 more)
+- [published](https://github.com/bradleydwyer/published): App store name checker (App Store & Google Play)
 
 **AI Tooling**
-- [sloppy](https://github.com/bradleydwyer/sloppy) — AI prose/slop detector
-- [nanaban](https://github.com/bradleydwyer/nanaban) — Gemini image generation CLI
-- [equip](https://github.com/bradleydwyer/equip) — Cross-agent skill manager
+
+- [sloppy](https://github.com/bradleydwyer/sloppy): AI prose/slop detector
+- [nanaban](https://github.com/bradleydwyer/nanaban): Gemini image generation CLI
+- [equip](https://github.com/bradleydwyer/equip): Cross-agent skill manager

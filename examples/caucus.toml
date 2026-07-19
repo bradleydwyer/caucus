@@ -1,0 +1,60 @@
+# caucus configuration example (TOML).
+#
+# Load from Rust with `caucus_core::Config::load("caucus.toml")`, or pass to
+# the CLI with `--config`. Discovery order: --config, ./caucus.toml,
+# $XDG_CONFIG_HOME/caucus/config.toml, ~/.config/caucus/config.toml.
+#
+# Every member is a pinned spec: `utility:model@effort` — the model id is
+# passed to the utility verbatim (no aliasing), and effort maps to the
+# utility's native mechanism (argv for claude/codex/opencode/grok, a transient
+# non-secret child-environment override for kimi).
+
+# Profile used when none is named explicitly. Falls back to the built-in
+# "deep" profile when omitted.
+default_profile = "deep"
+
+# Per-adapter overrides, keyed by utility id (claude, codex, kimi, opencode,
+# ollama, lmstudio, gemini, grok, acp). Unknown keys are rejected.
+[adapters.claude]
+binary_path = "/usr/local/bin/claude" # absolute path; skips PATH lookup
+timeout_secs = 600                    # wall-clock limit per run; child killed on expiry
+max_stdout_bytes = 1048576            # stdout cap; excess is truncated
+max_stderr_bytes = 262144             # stderr cap; excess is truncated
+
+[adapters.kimi]
+timeout_secs = 300
+env = { NO_COLOR = "1" }             # passed only to the Kimi child process
+
+[adapters.ollama]
+# Exact model pin used by `--auto` when live discovery finds nothing.
+model = "llama3.2:latest"
+
+# The built-in "deep" profile, spelled out for reference (exact members):
+#   claude:opus@xhigh                       (stable adapter)
+#   claude:claude-fable-5@xhigh             (stable adapter)
+#   codex:default@xhigh                     (stable adapter)
+#   opencode:zai-coding-plan/glm-5.2@xhigh  (experimental adapter)
+#   kimi:kimi-code/k3@high                  (experimental adapter)
+
+# A local-only profile; no API keys required.
+[profiles.local]
+description = "Local servers only"
+members = [
+  "ollama:llama3.2:latest",
+  "lmstudio:qwen3-32b",
+]
+
+# User profiles shadow built-ins of the same name.
+[profiles.deep-custom]
+description = "Frontier CLIs at maximum effort, pinned to exact model versions"
+strategy = "judge"
+quorum = 3
+deadline_secs = 900                   # whole-run wall-clock limit
+request_timeout_secs = 300            # maximum per provider request
+members = [
+  "claude:opus@max",
+  "claude:claude-fable-5@max",
+  "codex:default@xhigh",
+  "opencode:zai-coding-plan/glm-5.2@xhigh",
+  "kimi:kimi-code/k3@max",
+]

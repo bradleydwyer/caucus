@@ -10,9 +10,11 @@ use clap::Args;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
-use caucus_core::{Candidate, ConsensusResult, OutputFormat, consensus};
+use caucus_core::{
+    Candidate, ConsensusResult, LlmProvider, MultiProvider, OutputFormat, Transport, consensus,
+};
 
-use super::build_single_provider;
+use super::{build_single_provider, default_models};
 
 #[derive(Args)]
 pub struct ServeArgs {
@@ -43,9 +45,7 @@ pub async fn run(args: ServeArgs) -> anyhow::Result<()> {
         .route("/health", get(health))
         .route("/v1/consensus", post(consensus_endpoint))
         .route("/v1/pipeline", post(pipeline_endpoint))
-        .with_state(state)
-        // Permissive CORS is intentional — this is a local dev tool, not a production API
-        .layer(tower_http::cors::CorsLayer::permissive());
+        .with_state(state);
 
     let addr = format!("{}:{}", args.host, args.port);
     eprintln!("{} caucus API server listening on {}", "▶".green(), addr.cyan(),);
@@ -70,6 +70,9 @@ struct ConsensusRequest {
     strategy: String,
     #[serde(default = "default_format")]
     format: String,
+    /// Explicit HTTP/API model to use for strategies that need an LLM judge.
+    #[serde(default)]
+    judge_model: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -143,15 +146,21 @@ async fn consensus_endpoint(
         .parse()
         .map_err(|e: anyhow::Error| (StatusCode::BAD_REQUEST, format!("Invalid format: {e}")))?;
 
-    // Build judge LLM if needed
-    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> = if strategy_needs_llm(&req.strategy)
-    {
-        // Try to use the first candidate's model, or fall back to env-configured default
-        let model_name = candidates
-            .first()
-            .and_then(|c| c.model.clone())
-            .unwrap_or_else(|| "gpt-4o".to_string());
-        build_single_provider(&model_name).ok()
+    let judge_llm: Option<Box<dyn LlmProvider>> = if strategy_needs_llm(&req.strategy) {
+        let model_name = req
+            .judge_model
+            .clone()
+            .or_else(|| candidates.first().and_then(|candidate| candidate.model.clone()))
+            .or_else(|| default_models().into_iter().next())
+            .ok_or_else(|| {
+                (StatusCode::BAD_REQUEST, "judge strategy requires judge_model".to_string())
+            })?;
+        Some(build_server_provider(&model_name).map_err(|error| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("Judge provider is not available to HTTP serve: {error}"),
+            )
+        })?)
     } else {
         None
     };
@@ -214,19 +223,43 @@ async fn pipeline_endpoint(
         };
     }
 
-    let provider = super::build_provider(&req.models)
+    let provider = build_server_multi_provider(&req.models)
         .map_err(|e| (StatusCode::BAD_REQUEST, format!("Provider error: {e}")))?;
 
-    // Use first model as judge
-    let judge_llm: Option<Box<dyn caucus_core::LlmProvider>> =
-        req.models.first().and_then(|m| build_single_provider(m).ok());
+    let judge_llm = req.models.first().and_then(|model| provider.get(model));
 
     let result = pipeline
-        .run(&req.prompt, &provider, judge_llm.as_deref())
+        .run(&req.prompt, &provider, judge_llm)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Pipeline error: {e}")))?;
 
     Ok(Json(ConsensusResponse::from((result, &format))))
+}
+
+/// The unauthenticated HTTP surface must never gain access to installed
+/// subscription utilities. This explicit transport boundary keeps that true
+/// even if the general provider parser later learns more command aliases.
+fn build_server_provider(model: &str) -> anyhow::Result<Box<dyn LlmProvider>> {
+    if model.starts_with("cli:") || model.starts_with("acp:") {
+        anyhow::bail!("command and ACP provider specs are disabled on unauthenticated HTTP serve");
+    }
+
+    let provider = build_single_provider(model)?;
+    match provider.transport() {
+        Transport::Api | Transport::LocalServer => Ok(provider),
+        Transport::Command | Transport::Acp => anyhow::bail!(
+            "transport '{}' is disabled on unauthenticated HTTP serve",
+            provider.transport()
+        ),
+    }
+}
+
+fn build_server_multi_provider(models: &[String]) -> anyhow::Result<MultiProvider> {
+    let mut provider = MultiProvider::new();
+    for model in models {
+        provider = provider.add_shared(model.clone(), Arc::from(build_server_provider(model)?));
+    }
+    Ok(provider)
 }
 
 fn strategy_needs_llm(name: &str) -> bool {
@@ -310,7 +343,7 @@ async fn run_mcp() -> anyhow::Result<()> {
                                         },
                                         "strategy": {
                                             "type": "string",
-                                            "enum": ["majority_vote", "weighted_vote", "judge", "debate"],
+                                            "enum": ["majority_vote", "weighted_vote"],
                                             "default": "majority_vote"
                                         }
                                     },
@@ -394,4 +427,26 @@ async fn run_mcp() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn http_serve_rejects_command_and_acp_provider_specs() {
+        for model in ["cli:claude", "cli:codex", "acp:kimi"] {
+            let error = match build_server_provider(model) {
+                Ok(_) => panic!("{model} must not cross the unauthenticated HTTP boundary"),
+                Err(error) => error.to_string(),
+            };
+            assert!(error.contains("disabled on unauthenticated HTTP serve"));
+        }
+    }
+
+    #[test]
+    fn http_serve_allows_non_command_providers() {
+        let provider = build_server_provider("mock").unwrap();
+        assert_eq!(provider.transport(), Transport::Api);
+    }
 }

@@ -1,0 +1,15 @@
+# Legacy profile schema (pre-`members`), captured verbatim from a real
+# ~/.config/caucus/config.toml. The loader migrates this in memory with
+# warnings; the file on disk is never modified.
+[profiles.deep]
+models = [
+  "claude:claude-opus-4-6@xhigh",
+  "claude:claude-fable-5@xhigh",
+  "codex@xhigh",
+  "glm:zai-coding-plan/glm-5.2@xhigh",
+  "kimi:kimi-code/k3@high",
+]
+judge = "claude:claude-fable-5@xhigh"
+quorum = 4
+timeout_seconds = 240
+deadline_seconds = 900
