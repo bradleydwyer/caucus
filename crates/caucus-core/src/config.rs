@@ -106,6 +106,7 @@ members = [
     "codex:default@xhigh",
     "opencode:zai-coding-plan/glm-5.2@xhigh",
     "kimi:kimi-code/k3@high",
+    "grok:grok-4.5@high",
 ]
 "#;
 
@@ -464,6 +465,7 @@ members = ["codex:default@xhigh", "kimi:kimi-code/k3@high"]
                 "codex:default@xhigh",
                 "opencode:zai-coding-plan/glm-5.2@xhigh",
                 "kimi:kimi-code/k3@high",
+                "grok:grok-4.5@high",
             ]
         );
         assert_eq!(council.strategy, "judge");

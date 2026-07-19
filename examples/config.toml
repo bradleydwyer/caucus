@@ -14,7 +14,8 @@
 
 # Default profile. The built-in `deep` profile has exactly these members:
 #   claude:opus@xhigh, claude:claude-fable-5@xhigh, codex:default@xhigh,
-#   opencode:zai-coding-plan/glm-5.2@xhigh, kimi:kimi-code/k3@high
+#   opencode:zai-coding-plan/glm-5.2@xhigh, kimi:kimi-code/k3@high,
+#   grok:grok-4.5@high
 # User profiles defined below shadow built-ins.
 default_profile = "deep"
 

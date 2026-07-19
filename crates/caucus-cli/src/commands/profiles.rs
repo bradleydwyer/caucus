@@ -154,8 +154,9 @@ members = ["claude:claude-opus-4-6@xhigh", "kimi:kimi-code/k3@high"]
         // Built-in deep is present with its exact pins.
         let deep = all.iter().find(|e| e.name == "deep").unwrap();
         assert!(deep.builtin);
-        assert_eq!(deep.members.len(), 5);
+        assert_eq!(deep.members.len(), 6);
         assert_eq!(deep.members[0], "claude:opus@xhigh");
+        assert_eq!(deep.members[5], "grok:grok-4.5@high");
     }
 
     #[test]

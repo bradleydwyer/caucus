@@ -30,6 +30,7 @@ fn deep_council_members_and_metadata_are_exact() {
             "codex:default@xhigh",
             "opencode:zai-coding-plan/glm-5.2@xhigh",
             "kimi:kimi-code/k3@high",
+            "grok:grok-4.5@high",
         ]
     );
 
@@ -303,7 +304,7 @@ fn config_example_parses_and_named_profiles_resolve() {
     // The example's default profile resolves to the built-in deep council.
     let council = config.resolve_profile(None).unwrap();
     assert_eq!(council.name, "deep");
-    assert_eq!(council.members.len(), 5);
+    assert_eq!(council.members.len(), 6);
 
     // User-defined named profiles resolve too.
     let frontier = config.resolve_profile(Some("frontier")).unwrap();

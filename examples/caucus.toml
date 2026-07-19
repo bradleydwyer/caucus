@@ -35,6 +35,7 @@ model = "llama3.2:latest"
 #   codex:default@xhigh                     (stable adapter)
 #   opencode:zai-coding-plan/glm-5.2@xhigh  (experimental adapter)
 #   kimi:kimi-code/k3@high                  (experimental adapter)
+#   grok:grok-4.5@high                      (experimental adapter)
 
 # A local-only profile; no API keys required.
 [profiles.local]
