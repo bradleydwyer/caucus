@@ -20,8 +20,8 @@ fn parse_rounds(s: &str) -> Result<usize, String> {
 }
 
 /// Default frontier model for each provider.
-const DEFAULT_OPENAI_MODEL: &str = "gpt-5.2";
-const DEFAULT_ANTHROPIC_MODEL: &str = "claude-opus-4-6";
+const DEFAULT_OPENAI_MODEL: &str = "gpt-5.6-sol";
+const DEFAULT_ANTHROPIC_MODEL: &str = "claude-opus-4-8";
 const DEFAULT_GEMINI_MODEL: &str = "gemini-3.1-pro-preview";
 const DEFAULT_XAI_MODEL: &str = "grok-4-1-fast-reasoning";
 
@@ -89,5 +89,16 @@ pub fn build_single_provider(model: &str) -> anyhow::Result<Box<dyn LlmProvider>
         let base_url =
             std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".into());
         Ok(Box::new(HttpProvider::new(base_url, key, model)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DEFAULT_ANTHROPIC_MODEL, DEFAULT_OPENAI_MODEL};
+
+    #[test]
+    fn direct_api_defaults_track_current_frontier_models() {
+        assert_eq!(DEFAULT_OPENAI_MODEL, "gpt-5.6-sol");
+        assert_eq!(DEFAULT_ANTHROPIC_MODEL, "claude-opus-4-8");
     }
 }

@@ -53,7 +53,7 @@ Direct API models still work:
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
 
-caucus "What causes inflation?" -m gpt-5.2,claude-opus-4-6
+caucus "What causes inflation?" -m gpt-5.6-sol,claude-opus-4-8
 ```
 
 For the direct API form, `ask` is optional. caucus detects configured API
@@ -224,8 +224,8 @@ answers.
 use caucus_core::{consensus, Candidate};
 
 let candidates = vec![
-    Candidate::new("The answer is 42").with_model("gpt-5.2"),
-    Candidate::new("The answer is 42").with_model("claude-opus-4-6"),
+    Candidate::new("The answer is 42").with_model("gpt-5.6-sol"),
+    Candidate::new("The answer is 42").with_model("claude-opus-4-8"),
     Candidate::new("The answer is 7").with_model("gemini-3.1-pro-preview"),
 ];
 
@@ -240,8 +240,8 @@ println!("{:.0}%", result.agreement_score * 100.0); // "67%"
 from caucus import consensus, Candidate
 
 candidates = [
-    Candidate(content="The answer is 42", model="gpt-5.2"),
-    Candidate(content="The answer is 42", model="claude-opus-4-6"),
+    Candidate(content="The answer is 42", model="gpt-5.6-sol"),
+    Candidate(content="The answer is 42", model="claude-opus-4-8"),
     Candidate(content="The answer is 7", model="gemini-3.1-pro-preview"),
 ]
 

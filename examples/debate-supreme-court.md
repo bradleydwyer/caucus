@@ -1,8 +1,8 @@
 # `caucus "What causes inflation?" -s debate -f supreme-court -v`
 
 ▶ Querying 4 model(s) with strategy 'debate'...
-  · Querying gpt-5.2...
-  · Querying claude-opus-4-6...
+  · Querying gpt-5.6-sol...
+  · Querying claude-opus-4-8...
   · Querying gemini-3.1-pro-preview...
   · Querying grok-4-1-fast-reasoning...
 ▶ Got 4 candidate(s), running debate...
@@ -53,7 +53,7 @@ Debate completed in 3 round(s) of 3 maximum
 
 CONCURRENCES (4)
 ───────────────────────────────────────────
-1. gpt-5.2 wrote:
+1. gpt-5.6-sol wrote:
    Inflation is a sustained rise in the general price level—meaning your money buys less over time. It usually comes from a few broad forces, often acting together:
 
 ### 1) Demand-pull inflation (too much spending vs. supply)
@@ -87,7 +87,7 @@ A weaker currency raises the local price of imported goods and inputs, feeding i
 
 If you tell me which country and time period you mean (e.g., U.S. 2021–2023), I can break down the main drivers for that specific case.
 
-2. claude-opus-4-6 wrote:
+2. claude-opus-4-8 wrote:
    # Causes of Inflation
 
 Inflation — a general rise in prices over time — has several widely recognized causes:

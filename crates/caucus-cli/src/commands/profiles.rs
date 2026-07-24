@@ -136,7 +136,7 @@ description = "exact pins"
 strategy = "judge"
 quorum = 2
 deadline_secs = 300
-members = ["claude:claude-opus-4-6@xhigh", "kimi:kimi-code/k3@high"]
+members = ["claude:claude-opus-4-8@xhigh", "kimi:kimi-code/k3@high"]
 "#,
         )
         .unwrap();
@@ -144,7 +144,7 @@ members = ["claude:claude-opus-4-6@xhigh", "kimi:kimi-code/k3@high"]
         let frontier = all.iter().find(|e| e.name == "frontier").unwrap();
         assert_eq!(
             frontier.members,
-            vec!["claude:claude-opus-4-6@xhigh".to_string(), "kimi:kimi-code/k3@high".to_string()]
+            vec!["claude:claude-opus-4-8@xhigh".to_string(), "kimi:kimi-code/k3@high".to_string()]
         );
         assert!(!frontier.builtin);
         assert_eq!(frontier.strategy, "judge");

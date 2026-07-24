@@ -7,12 +7,12 @@
   "candidates": [
     {
       "content": "...",
-      "model": "gpt-5.2",
+      "model": "gpt-5.6-sol",
       "metadata": { "question": "What causes inflation?" }
     },
     {
       "content": "...",
-      "model": "claude-opus-4-6",
+      "model": "claude-opus-4-8",
       "metadata": { "question": "What causes inflation?" }
     },
     {
