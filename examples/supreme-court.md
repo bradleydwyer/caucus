@@ -27,7 +27,7 @@ All four responses converged on the core macro framework: demand-pull, cost-push
 
 CONCURRENCES (4)
 ───────────────────────────────────────────
-1. gpt-5.2 wrote:
+1. gpt-5.6-sol wrote:
    Inflation is a sustained rise in the *overall* price level (meaning your money buys less). It usually comes from one or more of these forces:
 
 ### 1) Demand-pull inflation (too much spending)
@@ -60,7 +60,7 @@ Sometimes a few key sectors drive inflation temporarily (housing, energy, autos)
 
 If you tell me the country and time period you’re thinking about, I can map these causes to what likely mattered most there.
 
-2. claude-opus-4-6 wrote:
+2. claude-opus-4-8 wrote:
    # Causes of Inflation
 
 Inflation — a general increase in prices over time — has several main causes:

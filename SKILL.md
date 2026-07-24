@@ -13,7 +13,7 @@ user-invocable: true
 argument-hint: "[prompt to send to multiple models]"
 metadata:
   author: bradleydwyer
-  version: "1.0.3"
+  version: "1.1.4"
   status: experimental
 ---
 
@@ -52,7 +52,7 @@ Always use `-f json` for parseable output.
 
 ```bash
 caucus "prompt" -f json                                          # all models, judge strategy
-caucus "prompt" -m gpt-5.2,claude-opus-4-6 -f json              # specific models
+caucus "prompt" -m gpt-5.6-sol,claude-opus-4-8 -f json          # specific models
 caucus "prompt" -s debate -f json                                # debate strategy
 caucus debate "prompt" --rounds 3 --live --format plain          # stream the debate live
 caucus "prompt" --profile deep -f json                           # council profile (exact members)

@@ -23,7 +23,7 @@ In real economies, inflation typically reflects a **combination** of these force
 All four responses share the core macro framework: demand-pull, cost-push, monetary/credit, and expectations. Response 1 is the most balanced and careful (including the one-time price-level vs sustained inflation distinction and structural factors). Response 2 is accurate but more generic. Response 3 is clear and adds examples but overstates that demand-pull is “most common” and leans heavily on the Friedman quote without caveats. Response 4 is detailed with equations and examples, but includes a few potentially misleading simplifications (e.g., implying QE ‘prints money’ directly) and some debatable numeric claims; still, its structure aligns with the consensus. The synthesis primarily follows Response 1’s clarity and nuance, supplemented by the common elements across all responses.
 
 === CANDIDATES ===
-[1] model=gpt-5.2
+[1] model=gpt-5.6-sol
 Inflation (a sustained rise in the overall price level) typically happens when **aggregate demand grows faster than aggregate supply**, when **production costs rise**, or when **the money/credit supply expands in a way that outpaces real output**. Common causes include:
 
 ### 1) Demand-pull inflation (too much spending)
@@ -65,7 +65,7 @@ Some events cause a **temporary jump in prices** (like a tax hike or a one-off s
 
 If you tell me which country/time period you have in mind, I can explain which drivers were most important in that case.
 
-[2] model=claude-opus-4-6
+[2] model=claude-opus-4-8
 # Causes of Inflation
 
 Inflation — a general rise in prices over time — has several widely recognized causes:
